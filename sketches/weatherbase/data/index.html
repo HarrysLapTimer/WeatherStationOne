@@ -1,0 +1,140 @@
+<html>
+	<head>
+		<title>Bolbro Wetter</title>
+		<style>
+			body { background-color: #ffffff; font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; color: #000000; }
+			button { border: none; color: white; padding: 10px 16px; text-align: center; text-decoration: none; display: inline-block; font-size: 36pt; }
+			ol { margin-left: 20pt; }
+			.h3-style { font-size: 36pt; font-weight: bold;}
+			.layout {
+				display: grid;
+				grid-template-rows: auto;
+				grid-template-columns: 100%;
+				grid-template-areas:
+					"header"
+					"aktuell"
+					"station"
+					"footer";
+				grid-gap: 10px;
+			}
+			.item-header { grid-area: header; padding-top: 1em; padding-left: 2em; padding-right: 2em; }
+			.item-aktuell { grid-area: aktuell; padding-left: 2em; padding-right: 2em; }
+			.item-station { grid-area: station; padding-left: 2em; padding-right: 2em; }
+			.item-footer { grid-area: footer; padding-left: 2em; padding-right: 2em; }
+
+			td { font-size: 27pt; padding-right: 20px; padding-bottom: 10px; }
+		</style>
+	</head>
+	<body>
+		<div class="layout">
+			<div class="item-header">
+				<center><img src="BolbroHaus.jpg"></img></center>
+				<h2>Bolbro Wetter</h2>
+				<p>Willkommen bei der <b>Bolbro Wetterstation</b>. Alle gezeigten Werte werden mit unserer Wetterstation
+				gemessen und hier dargestellt. Die Station sieht klassisch aus, ist aber unheimlich <b>Smart</b>. Mehr
+				Informationen zur Station findest Du weiter unten.</p>
+			</div>
+			<div class="item-aktuell">
+				<h3>Aktuelle Werte</h3>
+				<table id="weather-table">
+ 					<tr>
+    					<td style="text-align:center"><img src="temperature.png" height="64"></td>
+    					<td>Temperatur</td>
+    					<td><span id="temperature">-</span> &#8451;</td>
+  					</tr>
+ 					<tr>
+    					<td style="text-align:center"><img src="humidity.png" height="64"></td>
+    					<td>Luftfeuchtigkeit</td>
+    					<td> <span id="humidity">-</span>  %rH</td>
+  					</tr>
+ 					<tr>
+    					<td style="text-align:center"><img src="pressure.png" height="64"></td>
+    					<td>Luftdruck</td>
+    					<td> <span id="pressure">-</span>  hPa</td>
+  					</tr>
+ 					<tr>
+    					<td style="text-align:center"><img src="rain.png" height="64"></td>
+    					<td>Regen</td>
+    					<td> <span id="rainoverall">-</span>  hPa</td>
+  					</tr>
+ 					<tr>
+    					<td style="text-align:center"><img src="wind.png" height="50"></td>
+    					<td>Wind</td>
+    					<td><span id="windspeed">-</span>  m/s, <span id="winddirection">-</span></td>
+  					</tr>
+ 					<tr>
+    					<td style="text-align:center"><img src="battery.png" height="64"></td>
+    					<td>Batterie</td>
+    					<td><span id="batterypercentage">-</span> %</td>
+  					</tr>
+ 					<tr>
+    					<td style="text-align:center"><img src="updated.png" height="64"></td>
+    					<td>Letzte Meldung</td>
+    					<td><span id="updated">-</span></td>
+  					</tr>
+				</table>
+				<p>Wir w&uuml;nschen viel Spass und gute Erholung!</p>
+			</div>
+			<div class="item-station">
+				<h3>&Uuml;ber die Station</h3>
+				<p>Die Wetterstation ist ein <b>kompletter Eigenbau</b>. Die klassische Wetterh&uuml;tte wurde nach einem Bauplan
+				des deutschen Wetterdiensts (DWD) gebaut. Nachdem Messinstrumente heute kleiner (und elektronisch) sind,
+				ist eine solch grosse H&uuml;tte eigentlich nicht mehr n&ouml;tig. Sieht aber sch&ouml;n aus und stellt in jedem
+				Fall sicher, dass die Temperatur-Werte nicht durch Sonneneinstrahlung und andere Witterungseinfl&uuml;sse
+				verf&auml;lscht werden.</p>
+
+				<p>Neben der Messung von <b>Temperatur</b>, <b>Luftfeuchtigkeit</b> und der <b>Barometer-Funktion</b>, misst die Wetterstation
+				auch <b>Windrichtung</b> und <b>-Geschwindigkeit</b>. Weiterhin wird der <b>Niederschlag</b> gemessen. Wind und Niederschlag
+				werden mechanisch gemessen. Die Mechanik wurde komplett neu konstruiert und kann mit einem 3D Drucker
+				gedruckt werden. Die Modelle stellen wird im Netz zum Download zur Verf&uuml;gung.</p>
+
+				<p>Zuletzt gibt es eine Menge Elektronik und Software. Auch die ist komplett selbst entworfen um unsere
+				Anforderungen zu erf&uuml;llen. Wichtig war uns insbesondere, dass die Daten online ins Bolbrohaus gemeldet
+				und in die <b>Hausautomation</b> und <b>Energiemanagement</b> integriert werden. Dazu befindet sich in der Wetterh&uuml;tte ein Microcontroller,
+				der regelm&auml;ssig alle Messungen durchf&uuml;hrt. Die Daten werden dann &uuml;ber eine "Long Range" Funktechnik
+				ins Haus gemeldet. Hier befindet sich ein weiterer Microcontroller, der die Daten auf dieser Webseite
+				aufbereitet und in die Heimautomatisierung speist. Schaltpl&auml;ne und Software haben wir ebenfalls
+				ver&ouml;ffentlicht.</p>
+
+				<p>Hier sind alle Links:
+				<ul>
+					<li><a target="_blank" rel="noopener noreferrer" href="http://www.met.fu-berlin.de/%7Estefan/huette.html">Bauanleitung Wetterh&uuml;tte</a></li>
+					<li><a target="_blank" rel="noopener noreferrer" href="https://www.prusaprinters.org/social/92858-harry/prints">3D Modelle zum Drucken</a></li>
+					<li><a target="_blank" rel="noopener noreferrer" href="http://your_url_here.html">Schaltplan und Software</a></li>
+				</ul></p>
+			</div>
+			<div class="item-footer">
+				<p>Bei Fragen bitte gerne melden:<br>&phone;&thinsp;046&thinsp;36&thinsp;/&thinsp;977&thinsp;18&thinsp;18&thinsp;<br/>
+				<span id="timeinfo" style='color:gray;display:none;font-size: 14pt;'>
+					Letzter Start: <span id="starttime"></span>, Uptime: <span id="uptime"></span></span></p>
+			</div>
+		</div>
+
+		<script>
+			function getWeatherData() {
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+
+						var jsonObj = JSON.parse(this.responseText);
+
+						document.getElementById("temperature").innerHTML = jsonObj.weather.temperature;
+						document.getElementById("humidity").innerHTML = jsonObj.weather.humidity;
+						document.getElementById("pressure").innerHTML = jsonObj.weather.pressure;
+						document.getElementById("rainoverall").innerHTML = jsonObj.weather.rainoverall;
+						document.getElementById("windspeed").innerHTML = jsonObj.weather.windspeed;
+						document.getElementById("winddirection").innerHTML = jsonObj.weather.winddirection;
+						document.getElementById("batterypercentage").innerHTML = jsonObj.weather.batterypercentage;
+						document.getElementById("updated").innerHTML = jsonObj.updated;
+					}
+				};
+				xhttp.open("GET", "weatherdata.json", true);
+				xhttp.send();
+			}
+
+			//	one time calls
+			setInterval(function() {getWeatherData();}, 5000);
+
+    	</script>
+	</body>
+</html>

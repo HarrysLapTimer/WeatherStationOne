@@ -1,0 +1,156 @@
+/* -------------------------------------------------------------------------------- 
+ *  Weatherbase
+ *  Harald Schlangmann, March 2021
+ * -------------------------------------------------------------------------------- */
+
+#include <Bolbro.h>
+#include <BolbroWebServer.h>
+
+#include <WeatherPacket.h>
+#include <HC12.h>
+
+//  weather data
+
+WeatherPacket packet;
+time_t lastPacketUpdate = 0;
+
+//  web server
+
+class WeatherWebServer:public BolbroWebServer
+{
+  public:
+
+    WeatherWebServer() : BolbroWebServer () {
+    }
+
+    void begin() {
+
+      on("/", [this]() { CHECKLOCALACCESS loadFromSpiffs("/index.html"); });
+      on("/BolbroHaus.jpg", [this]() { CHECKLOCALACCESS loadFromSpiffs("/BolbroHaus.jpg"); });
+      on("/battery.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/battery.png"); });
+      on("/humidity.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/humidity.png"); });
+      on("/pressure.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/pressure.png"); });
+      on("/temperature.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/temperature.png"); });
+      on("/wind.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/wind.png"); });
+      on("/updated.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/updated.png"); });
+      on("/sun.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/sun.png"); });
+      on("/rain.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/rain.png"); });
+      on("/weatherdata.json", [this]() { CHECKLOCALACCESS handleWeatherData(); });
+    
+      BolbroWebServer::begin();    
+    }
+    
+  private:
+  
+    void handleWeatherData() {
+      String json = "{\n";
+    
+      json += "\t\"weather\" : " + packet.json("\t") + ",\n";
+    
+      if (lastPacketUpdate) {
+        String timeStr(ctime(&lastPacketUpdate));
+    
+        json += "\t\"updated\" : \"" + timeStr.substring(0, timeStr.length()-1) + "\"\n";
+      } else
+        json += "\t\"updated\" : \"-\"\n";
+    
+      json += "}\n";
+    
+      send(200, "application/json", json);
+      LOG->println("file /weatherdata.json generated and sent");
+    }
+};
+
+WeatherWebServer server;
+
+//  other functions
+static void propagateToOpenHAB() {
+  //  propagate verified data to openHAB
+  if (packet.mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_Temperature", String(packet.mTemperatureDegreeCelsius, 1)+"°C");
+  if (packet.mAccumulatedRainMM!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_SumRain", String(packet.mAccumulatedRainMM, 1)+"mm");
+  if (packet.mPressureHPA!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_Pressure", String(packet.mPressureHPA, 0)+"hPa");
+  if (packet.mHumidityPercent!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_Humidity", String(packet.mHumidityPercent, 1)+"%");
+  if (packet.mWindDirection[0]!='\0')
+    Bolbro.updateItem("ESP32_Weatherbase_WindAngle", String(packet.mWindDirection));
+  if (packet.mWindSpeedMpS!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_RawWindStrength", String(packet.mWindSpeedMpS, 1)+"m/s");
+  Bolbro.updateItem("ESP32_Weatherbase_BatteryLevel", String(packet.batteryPercentage(), 0)+"%");
+  Bolbro.updateItem("ESP32_Weatherbase_LastUpdate", Bolbro.openHABTime(lastPacketUpdate));  
+}
+
+//  main functions
+
+unsigned long secondsBetweenReports;
+
+void setup() 
+{
+  //  configure Bolbro
+  Bolbro.setSerialBaud(115200l);
+  Bolbro.addWiFi(SSID,PW); // customize
+ 
+  Bolbro.addWANGateway(WAN); // customize or remove
+
+  Bolbro.setOpenHABHost("openhabian"); // customize or remove
+  Bolbro.setSignalStrengthItem("ESP32_Weatherbase_SignalStrength"); // customize or remove
+  Bolbro.setLastStartItem("ESP32_Weatherbase_LastStart"); // customize or remove
+
+  Bolbro.setup("Weatherbase", DEBUG, USEREMOTEDEBUG);
+
+  Serial.println("Weather setup...");
+
+  Bolbro.connectToWiFi();
+
+  Bolbro.configureTime();
+
+  //  set station calibration defaults
+  secondsBetweenReports = Bolbro.prefGetUnsignedLong("reportSecs", DEFAULT_SECONDS_BETWEEN_REPORTS);
+
+  Serial.printf("Base setup...\n");
+
+  //  setup LoRa connection
+  HC12.begin();
+
+  //  configure signaling LEDs
+  pinMode(LED_PIN, OUTPUT);
+
+  //  setup web server
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+unsigned long lastMillisLEDTurnedOn = 0;
+
+void loop() 
+{
+  //  Handle requests to server
+  server.handleClient();
+
+  //  Handle input from station
+  if (HC12.available()) {
+    lastMillisLEDTurnedOn = millis();
+    digitalWrite(LED_PIN, HIGH); // high when data is received
+    if (packet.decodeByte(HC12.read())) {
+      packet.printSerial();
+      lastPacketUpdate = time(NULL);
+
+      //  we have a verified set of data here, send it to homeautomation
+      propagateToOpenHAB();
+    }
+  }
+
+  //  Maintain LED status, turn off after 2 seconds of inactivity
+  //  and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
+  unsigned long secondsPassed = (millis()-lastMillisLEDTurnedOn)/MS2S_FACTOR;
+
+  if (secondsPassed>3*secondsBetweenReports)
+    //  blink mode
+    digitalWrite(LED_PIN, secondsPassed%2?HIGH:LOW);
+  else if (secondsPassed>2)
+    digitalWrite(LED_PIN, LOW); // low once no activity detected
+
+  Bolbro.loop();
+}
