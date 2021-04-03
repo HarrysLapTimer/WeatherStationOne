@@ -15,7 +15,7 @@ This repository includes everything you need to setup the electronic and softwar
 
 Besides this repository, the 3D printable parts are provided on [Harry's Prusa Prints](https://www.prusaprinters.org/social/92858-harry/prints).
 
-[Building instructions](http://www.met.fu-berlin.de/%7Estefan/huette.html) for the weather hut / Stevenson Screen created as part of the project
+[Building instructions](http://www.met.fu-berlin.de/%7Estefan/huette.html) for the weather hut / Stevenson Screen created as part of the project.
 
 ## System Environment
 
