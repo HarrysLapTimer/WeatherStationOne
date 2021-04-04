@@ -22,10 +22,11 @@
 //  anemometer
 #define WINDSPEED_PIN 32
 #define NUM_COUNTS_PER_TURN 1 // depends on magnet / reed position
+#define DEFAULT_WINDSPEED_FACTOR 2.7
 
 //  rain gauge
 #define RAIN_PIN 27
-#define DEFAULT_BUCKET_TRIGGER_VOLUME 2250.0f // 2.25ml = 2250m3; 
+#define DEFAULT_BUCKET_TRIGGER_VOLUME 2250.0f // 2.25ml = 2250m3;
 
 //  temperature et al
 #define SDA_PIN 21 // documentation only

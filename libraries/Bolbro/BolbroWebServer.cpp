@@ -100,29 +100,30 @@ bool BolbroWebServer::loadFromSpiffs(String path)
   return result;
 }
 
-String BolbroWebServer::messageToString() {
+String BolbroWebServer::messageToString(String linePrefix) {
 
-  String message = "URI: ";
+  String message = linePrefix + "URI: ";
 
   message += uri();
 
-  message += "\nMethod: ";
+  message += "\n";
+  message += linePrefix + "Method: ";
   message += (method() == HTTP_GET) ? "GET" : "POST";
 
-  message += "\nArguments: ";
+  message += linePrefix + "Arguments: ";
   message += args();
   message += "\n";
   for (uint8_t i = 0; i < args(); i++) {
-    message += " " + argName(i) + ": " + arg(i) + "\n";
+    message += linePrefix + " " + argName(i) + ": " + arg(i) + "\n";
   }
-  message += "\nHeaders: ";
+  message += linePrefix + "Headers: ";
   message += headers();
   message += "\n";
   for (uint8_t i = 0; i < headers(); i++) {
-    message += " " + headerName(i) + ": " + header(i) + "\n";
+    message += linePrefix + " " + headerName(i) + ": " + header(i) + "\n";
   }
 
-  message += "\nHost Header: ";
+  message += linePrefix + "Host Header: ";
   message += hostHeader();
 
   return message;

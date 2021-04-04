@@ -79,6 +79,9 @@ class BolbroClass
 		void prefSetString(const char *key, const String &value);
 		String prefGetString(const char *key, String defaultValue = String());
 
+		void prefSetFloat(const char *key, float value);
+		float prefGetFloat(const char *key, float defaultValue = 0.0f);
+
 	private:
 
 #define MAX_NETWORKS 10

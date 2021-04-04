@@ -6,6 +6,9 @@
 //  to decode, feed bytes into decodeByte(); once it has found a valid packet, true is returned
 //
 
+#ifndef _PACKET_H_
+#define _PACKET_H_
+
 #include <Bolbro.h>
 #include <WeatherConfig.h>
 
@@ -113,12 +116,12 @@ class Packet {
           if (*(crc16Addr())==crc16()) {
             //  valid packet decoded
             if (DEBUG)
-              Serial.println("decoded a valid weather packet");
+              Serial.println("decoded a valid packet");
             return true;
           } else {
             //  corrupted packet, reset
             if (DEBUG)
-              Serial.println("decoded to a corrupted weather packet, skipping...");
+              Serial.println("decoded to a corrupted packet, skipping...");
             return false;
           }
         } else
@@ -127,3 +130,5 @@ class Packet {
       }
     }
 };
+
+#endif // _PACKET_H_

@@ -2,6 +2,9 @@
 //  binary packet of weather data
 //
 
+#ifndef _WEATHERPACKET_H_
+#define _WEATHERPACKET_H_
+
 #include <Bolbro.h>
 #include <Packet.h>
 
@@ -51,6 +54,27 @@ class WeatherPacket : public Packet {
       mBatteryVoltage = UNDEFINEDVALUE;
     }
 
+#if 1
+	float batteryPercentage() {
+		float cellVoltage = mBatteryVoltage/NUMCELLS;
+		float batteryPercentage = 0;
+		//	characteristics for a NCR18650BD Lithium-Ion cell
+		if (cellVoltage>2.0f) {
+			float remainingCapacity;
+			if (cellVoltage<4.3f)
+				remainingCapacity = (cellVoltage-2.0)/(4.3-2.0)*3000.0;
+			else
+				remainingCapacity = 3000.0+(cellVoltage-4.3)/(4.7-4.3)*300.0;
+
+			batteryPercentage = 100*remainingCapacity/3200.0;
+		}
+
+		if (batteryPercentage>100.0f)
+			batteryPercentage = 100.0f;
+
+		return batteryPercentage;
+	}
+#else
     float batteryPercentage() {
       //  derive percentage with cell voltage > 3.87 = 100% and < 3.4 = 0%
       float cellVoltage = mBatteryVoltage/NUMCELLS;
@@ -63,6 +87,7 @@ class WeatherPacket : public Packet {
 
       return batteryPercentage;
     }
+#endif
 
     void printSerial() {
       if (mCRC16==crc16()) {
@@ -161,3 +186,5 @@ class WeatherPacket : public Packet {
       return &mCRC16;
     }
 };
+
+#endif // _WEATHERPACKET_H_

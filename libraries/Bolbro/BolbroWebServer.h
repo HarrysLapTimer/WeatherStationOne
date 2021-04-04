@@ -26,10 +26,10 @@ class BolbroWebServer : public WebServer
     bool loadFromSpiffs(String path);
 
     //  debug support
-    String messageToString();
+    String messageToString(String linePrefix = "");
 
     //  standard reply
-#define CHECKLOCALACCESS if ((LOG->println(messageToString()), Bolbro.localAccess(client().remoteIP()))) // for server pages to provide to Bolbro users only
+#define CHECKLOCALACCESS if ((/*LOG->println(messageToString()),*/ Bolbro.localAccess(client().remoteIP()))) // for server pages to provide to local users only
     void handleNotFound();
 
     // set Germany during summer: http://weatherbase.local/time?GMTOffset=3600&DaylightOffset=3600

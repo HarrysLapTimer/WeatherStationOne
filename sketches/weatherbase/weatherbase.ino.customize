@@ -7,12 +7,34 @@
 #include <BolbroWebServer.h>
 
 #include <WeatherPacket.h>
+#include <CalibrationPacket.h>
 #include <HC12.h>
 
 //  weather data
 
-WeatherPacket packet;
+WeatherPacket weatherPacket;
 time_t lastPacketUpdate = 0;
+
+//  configuration data
+CalibrationPacket calibrationPacket;
+
+static void sendCalibration() {
+  uint8_t *packetBinary = calibrationPacket.encodedBytes();
+  int packetSize = calibrationPacket.encodedSize();
+  
+  if (DEBUG) {
+    Serial.println("sending calibration...");
+    calibrationPacket.printSerial();
+  }
+  
+  HC12.write(packetBinary, packetSize);
+}
+
+static void restoreCalibration() {
+  calibrationPacket.mSecondsBetweenReports = Bolbro.prefGetUnsignedLong("reportSecs", calibrationPacket.mSecondsBetweenReports);
+  calibrationPacket.mBucketTriggerVolume = Bolbro.prefGetFloat("bucketVol", calibrationPacket.mBucketTriggerVolume);
+  calibrationPacket.mWindSpeedFactor = Bolbro.prefGetFloat("speedFactor", calibrationPacket.mWindSpeedFactor);
+}
 
 //  web server
 
@@ -45,7 +67,7 @@ class WeatherWebServer:public BolbroWebServer
     void handleWeatherData() {
       String json = "{\n";
     
-      json += "\t\"weather\" : " + packet.json("\t") + ",\n";
+      json += "\t\"weather\" : " + weatherPacket.json("\t") + ",\n";
     
       if (lastPacketUpdate) {
         String timeStr(ctime(&lastPacketUpdate));
@@ -66,25 +88,24 @@ WeatherWebServer server;
 //  other functions
 static void propagateToOpenHAB() {
   //  propagate verified data to openHAB
-  if (packet.mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
-    Bolbro.updateItem("ESP32_Weatherbase_Temperature", String(packet.mTemperatureDegreeCelsius, 1)+"°C");
-  if (packet.mAccumulatedRainMM!=UNDEFINEDVALUE)
-    Bolbro.updateItem("ESP32_Weatherbase_SumRain", String(packet.mAccumulatedRainMM, 1)+"mm");
-  if (packet.mPressureHPA!=UNDEFINEDVALUE)
-    Bolbro.updateItem("ESP32_Weatherbase_Pressure", String(packet.mPressureHPA, 0)+"hPa");
-  if (packet.mHumidityPercent!=UNDEFINEDVALUE)
-    Bolbro.updateItem("ESP32_Weatherbase_Humidity", String(packet.mHumidityPercent, 1)+"%");
-  if (packet.mWindDirection[0]!='\0')
-    Bolbro.updateItem("ESP32_Weatherbase_WindAngle", String(packet.mWindDirection));
-  if (packet.mWindSpeedMpS!=UNDEFINEDVALUE)
-    Bolbro.updateItem("ESP32_Weatherbase_RawWindStrength", String(packet.mWindSpeedMpS, 1)+"m/s");
-  Bolbro.updateItem("ESP32_Weatherbase_BatteryLevel", String(packet.batteryPercentage(), 0)+"%");
+  if (weatherPacket.mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_Temperature", String(weatherPacket.mTemperatureDegreeCelsius, 1)+"°C");
+  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_SumRain", String(weatherPacket.mAccumulatedRainMM, 1)+"mm");
+  if (weatherPacket.mPressureHPA!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_Pressure", String(weatherPacket.mPressureHPA, 0)+"hPa");
+  if (weatherPacket.mHumidityPercent!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_Humidity", String(weatherPacket.mHumidityPercent, 1)+"%");
+  if (weatherPacket.mWindDirection[0]!='\0')
+    Bolbro.updateItem("ESP32_Weatherbase_WindAngle", String(weatherPacket.mWindDirection));
+  if (weatherPacket.mWindSpeedMpS!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_RawWindStrength", String(weatherPacket.mWindSpeedMpS, 1)+"m/s");
+  Bolbro.updateItem("ESP32_Weatherbase_BatteryLevel", String(weatherPacket.batteryPercentage(), 0)+"%");
+  Bolbro.updateItem("ESP32_Weatherbase_BatteryVoltage", String(weatherPacket.mBatteryVoltage, 2)+"V");
   Bolbro.updateItem("ESP32_Weatherbase_LastUpdate", Bolbro.openHABTime(lastPacketUpdate));  
 }
 
 //  main functions
-
-unsigned long secondsBetweenReports;
 
 void setup() 
 {
@@ -106,8 +127,8 @@ void setup()
 
   Bolbro.configureTime();
 
-  //  set station calibration defaults
-  secondsBetweenReports = Bolbro.prefGetUnsignedLong("reportSecs", DEFAULT_SECONDS_BETWEEN_REPORTS);
+  //  restore station calibration settings
+  restoreCalibration();
 
   Serial.printf("Base setup...\n");
 
@@ -122,10 +143,10 @@ void setup()
   Serial.println("HTTP server started");
 }
 
-unsigned long lastMillisLEDTurnedOn = 0;
-
 void loop() 
 {
+  static unsigned long lastMillisLEDTurnedOn = 0;
+  
   //  Handle requests to server
   server.handleClient();
 
@@ -133,9 +154,12 @@ void loop()
   if (HC12.available()) {
     lastMillisLEDTurnedOn = millis();
     digitalWrite(LED_PIN, HIGH); // high when data is received
-    if (packet.decodeByte(HC12.read())) {
-      packet.printSerial();
+    if (weatherPacket.decodeByte(HC12.read())) {
+      weatherPacket.printSerial();
       lastPacketUpdate = time(NULL);
+
+      //  station is up currently, "return" calibration / configuration parameters
+      sendCalibration();
 
       //  we have a verified set of data here, send it to homeautomation
       propagateToOpenHAB();
@@ -146,7 +170,7 @@ void loop()
   //  and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
   unsigned long secondsPassed = (millis()-lastMillisLEDTurnedOn)/MS2S_FACTOR;
 
-  if (secondsPassed>3*secondsBetweenReports)
+  if (secondsPassed>3*calibrationPacket.mSecondsBetweenReports)
     //  blink mode
     digitalWrite(LED_PIN, secondsPassed%2?HIGH:LOW);
   else if (secondsPassed>2)

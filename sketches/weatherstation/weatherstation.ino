@@ -9,7 +9,7 @@
 #include <Adafruit_BME280.h>
 
 //  project
-#include "weatherstation.h"
+#include <CalibrationPacket.h>
 #include "WeatherReport.hpp"
 
 /****************************************************************************************************
@@ -67,6 +67,12 @@ static void printWakeupReason() {
     default : Serial.printf("wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
   }
 }
+
+/****************************************************************************************************
+  calibration stuff
+ ****************************************************************************************************/
+
+RTC_DATA_ATTR CalibrationPacket calibrationPacket;
 
 /****************************************************************************************************
   sensor handling functions
@@ -182,7 +188,6 @@ RTC_DATA_ATTR unsigned int lastNumRainBucketsReported = 0;
 
 const double gaugeDiameter = 106; // mm
 const double gaugeArea = M_PI*(gaugeDiameter/2)*(gaugeDiameter/2); // mm2
-float bucketTriggerVolume = DEFAULT_BUCKET_TRIGGER_VOLUME; // 2.25ml = 2250m3; default value, overriden by CalibrationPacket
 
 static void handleRainState() {
   //  called after ext0 wakeup, increment  
@@ -197,7 +202,7 @@ static void propagateRain(WeatherReport &report) {
     // in case a value has been reset...
     numBuckets = numRainBuckets-lastNumRainBucketsReported;
     
-  double rainMM = numBuckets*bucketTriggerVolume/gaugeArea;
+  double rainMM = numBuckets*calibrationPacket.mBucketTriggerVolume/gaugeArea;
 
   //  rainMM is the rain in mm we got since last time propagateRain has been called
   report.addRain(rainMM);
@@ -301,15 +306,13 @@ static void handleWindSpeed() {
   }
 } 
 
-float windSpeedFactor = 1.25f; // default value, overriden by CalibrationPacket
-
 static void propagateWindSpeed(WeatherReport &report) {
   unsigned long speedSampleTime = millis(); 
   float secondsPassed = (speedSampleTime-startSampling)/1000.0f;
 
   if (secondsPassed>=1.0f) {
     // at least one second sampled, derive wind speed
-    float windSpeedMpS = windSpeedFactor*windSpeedCounts/NUM_COUNTS_PER_TURN/secondsPassed;
+    float windSpeedMpS = calibrationPacket.mWindSpeedFactor*windSpeedCounts/NUM_COUNTS_PER_TURN/secondsPassed;
 
     windSpeedCounts = 0;
 
@@ -323,13 +326,12 @@ static void propagateWindSpeed(WeatherReport &report) {
  ****************************************************************************************************/
 
 RTC_DATA_ATTR WeatherReport report;
-RTC_DATA_ATTR unsigned long secondsBetweenReports = DEFAULT_SECONDS_BETWEEN_REPORTS;
 
 void setup() {
 
   //  set up all triggers to wake up
   esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, 1);
-  esp_sleep_enable_timer_wakeup (secondsBetweenReports*uS2S_FACTOR);
+  esp_sleep_enable_timer_wakeup (calibrationPacket.mSecondsBetweenReports*uS2S_FACTOR);
 
   if (DEBUG)
     printWakeupReason();
@@ -384,8 +386,26 @@ void loop() {
     propagateTemperatureEtAll(report);
     propagateRain(report);
     
-    //  send report and goto sleep afterwards
+    //  send report...
     report.send();
+    digitalWrite(LED_PIN, LOW); //  turn LED off
+    
+    //  ...wait for a calibration update...
+    unsigned long waitStartedMillis = millis();
+    CalibrationPacket newCalibrationPacket;
+    while (millis()-waitStartedMillis<2000) {
+      if (HC12.available()) {
+        digitalWrite(LED_PIN, HIGH); // high when data is received
+        if (newCalibrationPacket.decodeByte(HC12.read())) {
+            calibrationPacket = newCalibrationPacket; // sound packet
+            calibrationPacket.printSerial();
+            digitalWrite(LED_PIN, LOW); // ready
+            break;
+        }
+      }
+    }
+    
+    //  ...and goto sleep afterwards 
     deepSleep();
   }
 

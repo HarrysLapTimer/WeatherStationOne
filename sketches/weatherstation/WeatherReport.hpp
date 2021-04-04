@@ -1,7 +1,6 @@
 //  project
-#include "weatherstation.h"
-#include "WeatherPacket.hpp"
-#include "HC12.hpp"
+#include <WeatherPacket.h>
+#include <HC12.h>
 
 #define TEMPERATURELOWPASS 0.1
 #define VOLTAGELOWPASS 0.5

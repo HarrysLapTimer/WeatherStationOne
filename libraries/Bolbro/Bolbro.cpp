@@ -683,6 +683,24 @@ unsigned long BolbroClass::prefGetUnsignedLong(const char *key, unsigned long de
 	return result;
 }
 
+void BolbroClass::prefSetFloat(const char *key, float value) {
+	preferences.begin(mAppNameLowerCase);
+	if (!preferences.putFloat(key, value))
+		LOG->printf("preference '%s/%s' write failed!\n", mAppNameLowerCase, key);
+	else
+		LOG->printf("preference '%s/%s' written: %f\n", mAppNameLowerCase, key, value);
+	preferences.end();
+}
+
+float BolbroClass::prefGetFloat(const char *key, float defaultValue) {
+	preferences.begin(mAppNameLowerCase);
+	float result = preferences.getFloat(key,defaultValue);
+	preferences.end();
+	LOG->printf("preference '%s/%s' read: %f\n", mAppNameLowerCase, key, result);
+
+	return result;
+}
+
 void BolbroClass::prefSetString(const char *key, const String &value) {
 	preferences.begin(mAppNameLowerCase);
 	if (!preferences.putString(key, value))

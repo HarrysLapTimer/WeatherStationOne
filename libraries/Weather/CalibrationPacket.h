@@ -2,8 +2,12 @@
 //  binary packet of calibration parameters
 //
 
+#ifndef _CALIBRATIONPACKET_H_
+#define _CALIBRATIONPACKET_H_
+
 #include <Bolbro.h>
 #include <Packet.h>
+#include <WeatherConfig.h>
 
 class CalibrationPacket : public Packet {
 
@@ -62,3 +66,5 @@ class CalibrationPacket : public Packet {
       return &mCRC16;
     }
 };
+
+#endif // _CALIBRATIONPACKET_H_
