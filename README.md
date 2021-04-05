@@ -55,6 +55,11 @@ Finally, the sketches:
 
 Once `weatherbase` is powered, connect your browser to `http://weatherbasedebug.local`
 
+## Screen Shots
+
+![Bolbro Wetter](pictures/ScreenShotBolbroWetter.png?raw=true "Bolbro Wetter")
+![Administration](pictures/ScreenShotAdministration.png?raw=true "Administration")
+
 ## TODO
 
 - add support for illumination and ground humidity
