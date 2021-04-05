@@ -30,12 +30,6 @@ static void sendCalibration() {
   HC12.write(packetBinary, packetSize);
 }
 
-static void restoreCalibration() {
-  calibrationPacket.mSecondsBetweenReports = Bolbro.prefGetUnsignedLong("reportSecs", calibrationPacket.mSecondsBetweenReports);
-  calibrationPacket.mBucketTriggerVolume = Bolbro.prefGetFloat("bucketVol", calibrationPacket.mBucketTriggerVolume);
-  calibrationPacket.mWindSpeedFactor = Bolbro.prefGetFloat("speedFactor", calibrationPacket.mWindSpeedFactor);
-}
-
 //  web server
 
 class WeatherWebServer:public BolbroWebServer
@@ -47,17 +41,24 @@ class WeatherWebServer:public BolbroWebServer
 
     void begin() {
 
-      on("/", [this]() { CHECKLOCALACCESS loadFromSpiffs("/index.html"); });
-      on("/BolbroHaus.jpg", [this]() { CHECKLOCALACCESS loadFromSpiffs("/BolbroHaus.jpg"); });
-      on("/battery.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/battery.png"); });
-      on("/humidity.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/humidity.png"); });
-      on("/pressure.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/pressure.png"); });
-      on("/temperature.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/temperature.png"); });
-      on("/wind.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/wind.png"); });
-      on("/updated.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/updated.png"); });
-      on("/sun.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/sun.png"); });
-      on("/rain.png", [this]() { CHECKLOCALACCESS loadFromSpiffs("/rain.png"); });
-      on("/weatherdata.json", [this]() { CHECKLOCALACCESS handleWeatherData(); });
+      //  static content
+      on("/", [this]() { loadFromSpiffs("/index.html"); });
+      on("/administration.html", [this]() { CHECKLOCALACCESS loadFromSpiffs("/administration.html"); });
+      on("/BolbroHaus.jpg", [this]() { loadFromSpiffs("/BolbroHaus.jpg"); });
+      on("/battery.png", [this]() { loadFromSpiffs("/battery.png"); });
+      on("/humidity.png", [this]() { loadFromSpiffs("/humidity.png"); });
+      on("/pressure.png", [this]() { loadFromSpiffs("/pressure.png"); });
+      on("/temperature.png", [this]() { loadFromSpiffs("/temperature.png"); });
+      on("/wind.png", [this]() { loadFromSpiffs("/wind.png"); });
+      on("/updated.png", [this]() { loadFromSpiffs("/updated.png"); });
+      on("/sun.png", [this]() { loadFromSpiffs("/sun.png"); });
+      on("/rain.png", [this]() { loadFromSpiffs("/rain.png"); });
+
+      //  dynamic stuff
+      on("/weatherdata.json", [this]() { handleWeatherData(); });
+      on("/calibrationdata.json", [this]() { handleCalibrationData(); });
+      on("/change-calibration", [this]() { CHECKLOCALACCESS changeCalibration(); });
+      on("/revert-calibration", [this]() { CHECKLOCALACCESS revertCalibration(); });
     
       BolbroWebServer::begin();    
     }
@@ -80,6 +81,83 @@ class WeatherWebServer:public BolbroWebServer
     
       send(200, "application/json", json);
       LOG->println("file /weatherdata.json generated and sent");
+    }
+
+    void handleCalibrationData() {
+      String json = calibrationPacket.json();
+    
+      send(200, "application/json", json);
+      LOG->println("file /calibrationdata.json generated and sent");
+    }
+
+    void revertCalibration() {
+      Serial.println(messageToString());
+      bool hadErrors = false;
+      bool hadPassword = false;
+      for (uint8_t i = 0; i < args(); i++) {
+        if (argName(i)=="password") {
+          hadErrors = hadErrors||arg(i)!=ADMINPASSWORD;
+          hadPassword = true;
+          LOG->printf("password: %s, hadErrors: %s\n", arg(i).c_str(), hadErrors?"true":"false");
+        } else
+          hadErrors = true;
+      }
+      
+      if (hadErrors||!hadPassword)
+        send(404, "text/plain", "invalid arguments");
+      else {
+        calibrationPacket.revertToDefaults();
+        send(200, "text/plain", "OK");
+      }
+    }
+    
+    void changeCalibration() {
+     Serial.println(messageToString());
+     bool hadErrors = false;
+      bool hadPassword = false;
+      for (uint8_t i = 0; i < args(); i++) {
+        if (argName(i)=="password") {
+          hadErrors = hadErrors||arg(i)!=ADMINPASSWORD;
+          hadPassword = true;
+          LOG->printf("password: %s, hadErrors: %s\n", arg(i).c_str(), hadErrors?"true":"false");
+        } else if (argName(i)=="speedFactor") {
+          float newValue = arg(i).toFloat();
+          if (newValue==0)
+            hadErrors = true;
+          else
+            calibrationPacket.mWindSpeedFactor = newValue;
+          LOG->printf("speedFactor: %.1f, hadErrors: %s\n", newValue, hadErrors?"true":"false");
+        } else if (argName(i)=="height") {
+          float newValue = arg(i).toFloat();
+          if (newValue==0)
+            hadErrors = true;
+          else
+            calibrationPacket.mMeasurementHeight = newValue;
+          LOG->printf("height: %.2f, hadErrors: %s\n", newValue, hadErrors?"true":"false");
+        } else if (argName(i)=="reportSecs") {
+          unsigned long newValue = arg(i).toInt();
+          if (newValue==0)
+            hadErrors = true;
+          else
+            calibrationPacket.mSecondsBetweenReports = newValue;
+          LOG->printf("reportSecs: %ld, hadErrors: %s\n", newValue, hadErrors?"true":"false");
+        } else if (argName(i)=="bucketVol") {
+          float newValue = arg(i).toFloat();
+          if (newValue==0)
+            hadErrors = true;
+          else
+            calibrationPacket.mBucketTriggerVolume = newValue;
+          LOG->printf("bucketVol: %.2f, hadErrors: %s\n", newValue, hadErrors?"true":"false");
+        } else
+          hadErrors = true;
+      }     
+
+      if (hadErrors||!hadPassword)
+        send(404, "text/plain", "invalid arguments");
+      else {
+        calibrationPacket.save();
+        send(200, "text/plain", "OK");
+      }
     }
 };
 
@@ -128,7 +206,7 @@ void setup()
   Bolbro.configureTime();
 
   //  restore station calibration settings
-  restoreCalibration();
+  calibrationPacket.restore();
 
   Serial.printf("Base setup...\n");
 

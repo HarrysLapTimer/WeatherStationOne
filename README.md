@@ -31,6 +31,7 @@ Start with setting up your Arduino environment. When using the electronic parts 
 
 - install support for your ESP32 developer board
 - install ESP32 Sketch Data Upload, a tutorial is available [here](https://randomnerdtutorials.com/install-esp32-filesystem-uploader-arduino-ide/)
+- install RemoteDebug library required for our own libraries
 
 `weatherbase` will run a web server to allow the user to monitor current weather data. The content (icons and html) is provided on SPIFF stored files. We will use ESP32 Sketch Data Upload to upload this files from the sketch folder to `weatherbase`.
 

@@ -90,48 +90,52 @@ class WeatherPacket : public Packet {
 #endif
 
     void printSerial() {
-      if (mCRC16==crc16()) {
-        if (mAccumulatedRainMM!=UNDEFINEDVALUE) {
-            Serial.print("rain: ");
-            Serial.print(mAccumulatedRainMM, 1);
-            Serial.println(" mm overall");
-        }
+    	Serial.print("magic byte: ");
+			Serial.print(mMagicByte);
+			Serial.println(mMagicByte==MAGICBYTE?" correct":" wrong");
 
-        if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE) {
-            Serial.print("temperature: ");
-            Serial.print(mTemperatureDegreeCelsius, 1);
-            Serial.println(" degree C");
-
-            Serial.print("pressure: ");
-            Serial.print(mPressureHPA, 1);
-            Serial.println(" hPa");
-
-            Serial.print("humidity: ");
-            Serial.print(mHumidityPercent, 0);
-            Serial.println(" %rH");
-        }
-
-        if (mWindDirection[0]) {
-            Serial.print("wind direction: ");
-            Serial.println(mWindDirection);
-        }
-
-        if (mWindSpeedMpS!=UNDEFINEDVALUE) {
-          Serial.print("wind speed: ");
-          Serial.print(mWindSpeedMpS, 1);
-          Serial.println(" m/s");
-        }
-
-        if (mBatteryVoltage!=UNDEFINEDVALUE) {
-          Serial.print("battery voltage: ");
-          Serial.print(mBatteryVoltage, 2);
-          Serial.print(" V, ");
-          Serial.print(batteryPercentage(), 0);
-          Serial.println("%");
-        }
-      } else {
-        Serial.println("printing of corrupted weather packet failed");
+			if (mAccumulatedRainMM!=UNDEFINEDVALUE) {
+      	Serial.print("rain: ");
+        Serial.print(mAccumulatedRainMM, 1);
+      	Serial.println(" mm overall");
       }
+
+			if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE) {
+					Serial.print("temperature: ");
+					Serial.print(mTemperatureDegreeCelsius, 1);
+					Serial.println(" degree C");
+
+					Serial.print("pressure: ");
+					Serial.print(mPressureHPA, 1);
+					Serial.println(" hPa");
+
+					Serial.print("humidity: ");
+					Serial.print(mHumidityPercent, 0);
+					Serial.println(" %rH");
+			}
+
+			if (mWindDirection[0]) {
+					Serial.print("wind direction: ");
+					Serial.println(mWindDirection);
+			}
+
+			if (mWindSpeedMpS!=UNDEFINEDVALUE) {
+				Serial.print("wind speed: ");
+				Serial.print(mWindSpeedMpS, 1);
+				Serial.println(" m/s");
+			}
+
+			if (mBatteryVoltage!=UNDEFINEDVALUE) {
+				Serial.print("battery voltage: ");
+				Serial.print(mBatteryVoltage, 2);
+				Serial.print(" V, ");
+				Serial.print(batteryPercentage(), 0);
+				Serial.println("%");
+			}
+
+			Serial.print("checksum: ");
+			Serial.print(mCRC16);
+			Serial.println(mCRC16==crc16()?" correct":" wrong");
     }
 
     String json(String linePrefix = "") {
@@ -165,7 +169,7 @@ class WeatherPacket : public Packet {
 
       if (mBatteryVoltage!=UNDEFINEDVALUE) {
         json += linePrefix + "\t\"batteryvoltage\" : " + String(mBatteryVoltage, 2) +",\n";
-        json += linePrefix + "\t\"batterypercentage\" : " + String(batteryPercentage(), 1) +"\n";
+        json += linePrefix + "\t\"batterypercentage\" : " + String(batteryPercentage(), 0) +"\n";
       } else {
         json += linePrefix + "\t\"batteryvoltage\" : \"" STRINGNOTINITIALIZED "\",\n";
         json += linePrefix + "\t\"batterypercentage\" : \"" STRINGNOTINITIALIZED "\"\n";

@@ -8,6 +8,9 @@
 /****************************************************************************************************
   configuration
  ****************************************************************************************************/
+
+#define ADMINPASSWORD "admin123"
+
 #define DEFAULT_SECONDS_BETWEEN_REPORTS 20 // raise to reduce battery drain; default value, overriden by CalibrationPacket
 #define SECONDS_SAMPLING 3
 
@@ -22,7 +25,21 @@
 //  anemometer
 #define WINDSPEED_PIN 32
 #define NUM_COUNTS_PER_TURN 1 // depends on magnet / reed position
-#define DEFAULT_WINDSPEED_FACTOR 2.7
+
+//	speed calibration: assuming the cup centers will move at wind speed, we have
+//		speed = (rotations * circumference) / time
+//	with
+//		rotations a number
+//		circumference the length of the circle circumference of the cup's movements
+//		time the time rotations have been measured
+//	in addition, there is a factor for loss of cup speed compared to wind:
+//		ANEMOMETER_RADIUS
+
+#define ANEMOMETER_RADIUS 0.08 // 80mm = 0.08m
+#define ANEMOMETER_LOSS 1.18
+//#define DEFAULT_WINDSPEED_FACTOR 2.7
+#define DEFAULT_WINDSPEED_FACTOR (2*M_PI*ANEMOMETER_RADIUS*ANEMOMETER_LOSS)
+#define DEFAULT_MEASUREMENT_HEIGHT 10.0 // no compensation
 
 //  rain gauge
 #define RAIN_PIN 27

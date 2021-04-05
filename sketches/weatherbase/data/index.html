@@ -40,32 +40,32 @@
  					<tr>
     					<td style="text-align:center"><img src="temperature.png" height="64"></td>
     					<td>Temperatur</td>
-    					<td><span id="temperature">-</span> &#8451;</td>
+    					<td><span id="temperature">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="humidity.png" height="64"></td>
     					<td>Luftfeuchtigkeit</td>
-    					<td> <span id="humidity">-</span>  %rH</td>
+    					<td> <span id="humidity">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="pressure.png" height="64"></td>
     					<td>Luftdruck</td>
-    					<td> <span id="pressure">-</span>  hPa</td>
+    					<td> <span id="pressure">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="rain.png" height="64"></td>
     					<td>Regen</td>
-    					<td> <span id="rainoverall">-</span>  hPa</td>
+    					<td> <span id="rainoverall">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="wind.png" height="50"></td>
     					<td>Wind</td>
-    					<td><span id="windspeed">-</span>  m/s, <span id="winddirection">-</span></td>
+    					<td><span id="wind">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="battery.png" height="64"></td>
     					<td>Batterie</td>
-    					<td><span id="batterypercentage">-</span> %</td>
+    					<td><span id="batterypercentage">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="updated.png" height="64"></td>
@@ -73,7 +73,6 @@
     					<td><span id="updated">-</span></td>
   					</tr>
 				</table>
-				<p>Wir w&uuml;nschen viel Spass und gute Erholung!</p>
 			</div>
 			<div class="item-station">
 				<h3>&Uuml;ber die Station</h3>
@@ -104,13 +103,14 @@
 				</ul></p>
 			</div>
 			<div class="item-footer">
-				<p>Bei Fragen bitte gerne melden:<br>&phone;&thinsp;046&thinsp;36&thinsp;/&thinsp;977&thinsp;18&thinsp;18&thinsp;<br/>
-				<span id="timeinfo" style='color:gray;display:none;font-size: 14pt;'>
-					Letzter Start: <span id="starttime"></span>, Uptime: <span id="uptime"></span></span></p>
+				<p>Copyright &copy; 2021, Harald Schlangmann &ndash; <a href="administration.html">Administration</a></p>
 			</div>
 		</div>
 
 		<script>
+
+			//	TODO, multi-language-support: https://www.youtube.com/watch?v=PaJrDAmrOB4
+
 			function getWeatherData() {
 				var xhttp = new XMLHttpRequest();
 				xhttp.onreadystatechange = function() {
@@ -118,13 +118,26 @@
 
 						var jsonObj = JSON.parse(this.responseText);
 
-						document.getElementById("temperature").innerHTML = jsonObj.weather.temperature;
-						document.getElementById("humidity").innerHTML = jsonObj.weather.humidity;
-						document.getElementById("pressure").innerHTML = jsonObj.weather.pressure;
-						document.getElementById("rainoverall").innerHTML = jsonObj.weather.rainoverall;
-						document.getElementById("windspeed").innerHTML = jsonObj.weather.windspeed;
-						document.getElementById("winddirection").innerHTML = jsonObj.weather.winddirection;
-						document.getElementById("batterypercentage").innerHTML = jsonObj.weather.batterypercentage;
+						document.getElementById("temperature").innerHTML = jsonObj.weather.temperature=="-"?"-":jsonObj.weather.temperature + " &#8451;";
+						document.getElementById("humidity").innerHTML = jsonObj.weather.humidity=="-"?"-":jsonObj.weather.humidity + " %rH";
+						document.getElementById("pressure").innerHTML = jsonObj.weather.pressure=="-"?"-":jsonObj.weather.pressure + " hPa";
+						document.getElementById("rainoverall").innerHTML = jsonObj.weather.rainoverall=="-"?"-":jsonObj.weather.rainoverall + " mm";
+
+						var wind = "-"
+
+						if (jsonObj.weather.windspeed=="-")
+							if (jsonObj.weather.winddirection=="-")
+								wind = "-"
+							else
+								wind = jsonObj.weather.winddirection
+						else
+							if (jsonObj.weather.winddirection=="-")
+								wind = jsonObj.weather.windspeed + " m/s"
+							else
+								wind = jsonObj.weather.windspeed + " m/s, " + jsonObj.weather.winddirection
+						document.getElementById("wind").innerHTML = wind
+
+						document.getElementById("batterypercentage").innerHTML = jsonObj.weather.batterypercentage=="-"?"-":jsonObj.weather.batterypercentage + " %";
 						document.getElementById("updated").innerHTML = jsonObj.updated;
 					}
 				};
@@ -132,8 +145,13 @@
 				xhttp.send();
 			}
 
+			function administration(num) {
+				window.location.href = "administration.html";
+			}
+
 			//	one time calls
 			setInterval(function() {getWeatherData();}, 5000);
+			getWeatherData();
 
     	</script>
 	</body>

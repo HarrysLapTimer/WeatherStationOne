@@ -82,14 +82,14 @@ class Packet {
     virtual uint16_t *crc16Addr() = 0;
 
     uint8_t *encodedBytes(bool setCRC = true) {
-      *(magicByteAddr()) = MAGICBYTE;
+    	*(magicByteAddr()) = MAGICBYTE;
       if (setCRC) {
-        *(crc16Addr()) = crc16();
-        if (DEBUG) {
-          Serial.print("setting CRC to ");
-          Serial.println(*(crc16Addr()));
+    		*(crc16Addr()) = crc16();
+    		if (DEBUG) {
+      		Serial.print("setting CRC to ");
+        	Serial.println(*(crc16Addr()));
         }
-      }
+     	}
       return (uint8_t *) magicByteAddr();
     }
 

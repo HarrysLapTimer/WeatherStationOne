@@ -59,12 +59,24 @@ static void printWakeupReason() {
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
 
   switch(wakeup_reason) {
-    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("wakeup caused by external signal using RTC_IO"); break;
-    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("wakeup caused by external signal using RTC_CNTL"); break;
-    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("wakeup caused by timer"); break;
-    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("wakeup caused by touchpad"); break;
-    case ESP_SLEEP_WAKEUP_ULP : Serial.println("wakeup caused by ULP program"); break;
-    default : Serial.printf("wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+    case ESP_SLEEP_WAKEUP_EXT0:
+      Serial.println("----------- wakeup caused by external signal using RTC_IO -----------"); 
+      break;
+    case ESP_SLEEP_WAKEUP_EXT1:
+      Serial.println("---------- wakeup caused by external signal using RTC_CNTL ----------"); 
+      break;
+    case ESP_SLEEP_WAKEUP_TIMER: 
+      Serial.println("---------------------- wakeup caused by timer -----------------------"); 
+      break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD:
+      Serial.println("--------------------- wakeup caused by touchpad ---------------------"); 
+      break;
+    case ESP_SLEEP_WAKEUP_ULP:
+      Serial.println("-------------------- wakeup caused by ULP program -------------------"); 
+      break;
+    default: 
+      Serial.printf("-------------- wakeup was not caused by deep sleep: %d ---------------\n",wakeup_reason); 
+      break;
   }
 }
 
@@ -72,7 +84,13 @@ static void printWakeupReason() {
   calibration stuff
  ****************************************************************************************************/
 
-RTC_DATA_ATTR CalibrationPacket calibrationPacket;
+//  tricky: while RTC_DATA_ATTR variables should be initialized once and keep state for wake ups
+//  after deep sleep, the compiler is calling the constructor every time - including wake ups;
+//  to keep RTC state from former run, initializeCalibrationPacketMembers is passed in to allow disabling
+//  of member initialization; called with true during startup, it will be false for wake ups from deep
+//  sleep (see CalibrationPacket())
+RTC_DATA_ATTR bool initializeCalibrationPacketMembers = true;
+RTC_DATA_ATTR CalibrationPacket calibrationPacket(initializeCalibrationPacketMembers);
 
 /****************************************************************************************************
   sensor handling functions
@@ -311,10 +329,33 @@ static void propagateWindSpeed(WeatherReport &report) {
   float secondsPassed = (speedSampleTime-startSampling)/1000.0f;
 
   if (secondsPassed>=1.0f) {
-    // at least one second sampled, derive wind speed
+    //  at least one second sampled, derive wind speed
+
+    //  derive wind speed measured from number of rotations: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5948875/
     float windSpeedMpS = calibrationPacket.mWindSpeedFactor*windSpeedCounts/NUM_COUNTS_PER_TURN/secondsPassed;
 
-    windSpeedCounts = 0;
+    Serial.print("wind speed measured at ");
+    Serial.print(calibrationPacket.mMeasurementHeight, 1);
+    Serial.print(" m: ");
+    Serial.print(windSpeedMpS, 1);
+    Serial.println(" m/s");
+
+    windSpeedCounts = 0; // reset
+
+    //  measurements made on a height (reference) different to height 10m need a compensation:
+    //    v(h) = vref/ln(href/z0)*ln(h/z0)
+    //  with
+    //    vref = windSpeedMpS
+    //    href = calibrationPacket.mMeasurementHeight
+    //    z0 = 
+    //    h = 10.0
+
+    const float z0 = 0.1; // https://www.igwindkraft.at/kinder/windkurs/windpowerweb/de/stat/unitsw.htm#roughness
+    windSpeedMpS = windSpeedMpS/log(calibrationPacket.mMeasurementHeight/z0)*log(10.0/z0);
+
+    Serial.print("wind speed at 10 meter height: ");
+    Serial.print(windSpeedMpS, 1);
+    Serial.println(" m/s");
 
     report.setWindSpeed(windSpeedMpS);
   } else
@@ -325,7 +366,7 @@ static void propagateWindSpeed(WeatherReport &report) {
   main functions  
  ****************************************************************************************************/
 
-RTC_DATA_ATTR WeatherReport report;
+WeatherReport report;
 
 void setup() {
 
@@ -333,9 +374,10 @@ void setup() {
   esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, 1);
   esp_sleep_enable_timer_wakeup (calibrationPacket.mSecondsBetweenReports*uS2S_FACTOR);
 
-  if (DEBUG)
+  if (DEBUG) {
     printWakeupReason();
-
+  }
+  
   //  configure signaling LEDs
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH); // high until deep sleep

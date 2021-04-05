@@ -1,0 +1,140 @@
+<html>
+	<head>
+		<title>Bolbro Wetter</title>
+		<style>
+			body, input { background-color: #ffffff; font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; color: #000000; }
+			input:invalid { border: 2px dashed red; }
+			button { border: none; color: white; padding: 10px 16px; text-align: center; text-decoration: none; display: inline-block; font-size: 36pt; }
+			ol { margin-left: 20pt; }
+			.h3-style { font-size: 36pt; font-weight: bold;}
+			.layout {
+				display: grid;
+				grid-template-rows: auto;
+				grid-template-columns: 100%;
+				grid-template-areas:
+					"header"
+					"calibration"
+					"footer";
+				grid-gap: 10px;
+			}
+			.item-header { grid-area: header; padding-top: 1em; padding-left: 2em; padding-right: 2em; }
+			.item-calibration { grid-area: calibration; padding-left: 2em; padding-right: 2em; }
+			.item-footer { grid-area: footer; padding-left: 2em; padding-right: 2em; }
+
+			td { font-size: 27pt; padding-right: 20px; padding-bottom: 10px; }
+		</style>
+	</head>
+	<body>
+		<div class="layout">
+			<div class="item-header">
+				<center><img src="BolbroHaus.jpg"></img></center>
+				<h2>Administration</h2>
+				<p>Hier k&ouml;nnen diverse Parameter zur Konfiguration und Kalibrierung der Wetterstation ge&auml;ndert werden.
+					Bitte vor dem Dr&uuml;cken von <span style='background-color: #60c9f8; color: white'>&nbsp;&Auml;ndern&nbsp;</span> das Passwort eingeben.</p>
+			</div>
+			<div class="item-calibration">
+				<h3>Kalibrierung / Konfiguration</h3>
+				<form action="/change-calibration" method="post" name="calibrationForm">
+					<table>
+						<tr>
+							<td><label for="bucketVol">Eimer Volumen</label></td>
+							<td><input type="number" id="bucketVol" name="bucketVol" min="2000" max="3000" step="1" required> mm&sup3;</td>
+						</tr>
+						<tr>
+							<td><label for="speedFactor">Faktor Windgeschwindigkeit</label></td>
+							<td><input type="number" id="speedFactor" name="speedFactor" min="0" max="5" step="0.01" required></td>
+						</tr>
+						<tr>
+							<td><label for="height">H&ouml;he der Messung</label></td>
+							<td><input type="number" id="height" name="height" min="1" max="100" step="0.1" required> m</td>
+						</tr>
+						<tr>
+							<td><label for="reportSecs">Zeit zwischen Reports</label></td>
+							<td><input type="number" id="reportSecs" name="reportSecs" min="20" max="120" required> s</td>
+						</tr>
+						<tr>
+							<td><label for="password">Passwort</label></td>
+							<td><input type="password" id="password" name="password" required></td>
+						</tr>
+					</table>
+					<p>
+						<button style='background-color: #60c9f8;' type='button' onclick='doSubmit()'>&Auml;ndern</button>
+						<button style='background-color: #ff3b30;' type='button' onclick='revertToDefaults()'>Standard</button>
+						<button style='background-color: gray;' type='button' onclick='goBack()'>Zur&uuml;ck</button>
+					</p>
+				</form>
+			</div>
+			<div class="item-footer">
+				<p>Copyright &copy; 2021, Harald Schlangmann</p>
+			</div>
+		</div>
+
+		<script>
+			function initializeForm() {
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+
+						var jsonObj = JSON.parse(this.responseText);
+
+						document.getElementById("bucketVol").value = jsonObj.bucketVol;
+						document.getElementById("speedFactor").value = jsonObj.speedFactor;
+						document.getElementById("height").value = jsonObj.height;
+						document.getElementById("reportSecs").value = jsonObj.reportSecs;
+					}
+				};
+				xhttp.open("GET", "calibrationdata.json", true);
+				xhttp.send();
+			}
+
+			initializeForm(); // call once
+
+			function goBack() {
+				window.location.href = document.referrer;
+			}
+
+			function doSubmit() {
+  				var xhttp = new XMLHttpRequest();
+        		var formdata  = new FormData();
+
+        		formdata.append("bucketVol", document.getElementById("bucketVol").value);
+        		formdata.append("speedFactor", document.getElementById("speedFactor").value);
+        		formdata.append("height", document.getElementById("height").value);
+        		formdata.append("reportSecs", document.getElementById("reportSecs").value);
+        		formdata.append("password", document.getElementById("password").value);
+
+				xhttp.onreadystatechange = function () {
+					if(this.readyState === XMLHttpRequest.DONE) {
+						if (this.status == 200)
+							goBack();
+  						else
+    						alert('Parameter oder Passwort falsch...' );
+    				}
+				};
+
+  				xhttp.open('POST', 'change-calibration' );
+				xhttp.send(formdata);
+			}
+
+			function revertToDefaults() {
+				var xhttp = new XMLHttpRequest();
+        		var formdata  = new FormData();
+
+        		formdata.append("password", document.getElementById("password").value);
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == XMLHttpRequest.DONE) {
+						if (this.status == 200)
+							//	revert triggered, pull reverted values
+							initializeForm();
+						else
+    						alert('Passwort falsch...' );
+					}
+				};
+				xhttp.open('POST', "revert-calibration");
+				xhttp.send(formdata);
+			}
+
+    	</script>
+	</body>
+</html>

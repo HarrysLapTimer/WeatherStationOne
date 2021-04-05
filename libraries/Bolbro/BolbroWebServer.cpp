@@ -109,6 +109,7 @@ String BolbroWebServer::messageToString(String linePrefix) {
   message += "\n";
   message += linePrefix + "Method: ";
   message += (method() == HTTP_GET) ? "GET" : "POST";
+  message += "\n";
 
   message += linePrefix + "Arguments: ";
   message += args();
