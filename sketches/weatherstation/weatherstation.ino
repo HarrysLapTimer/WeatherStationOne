@@ -10,7 +10,7 @@
 
 //  project
 #include <CalibrationPacket.h>
-#include "WeatherReport.hpp"
+#include "WeatherReport.h"
 
 /****************************************************************************************************
   utility functions
