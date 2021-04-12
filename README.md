@@ -64,7 +64,6 @@ Once `weatherbase` is powered, connect your browser to `http://weatherbasedebug.
 
 - add support for illumination and ground humidity sensors
 - add help on all the pitfalls one may run into creating this project
-- enrich `weatherbase`-side data
 - add multi-language support for web interface
 
 
