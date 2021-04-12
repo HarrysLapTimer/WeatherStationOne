@@ -22,6 +22,7 @@
 			.item-station { grid-area: station; padding-left: 2em; padding-right: 2em; }
 			.item-footer { grid-area: footer; padding-left: 2em; padding-right: 2em; }
 
+			table { margin-left:2em; }
 			td { font-size: 27pt; padding-right: 20px; padding-bottom: 10px; }
 		</style>
 	</head>
@@ -55,7 +56,7 @@
  					<tr>
     					<td style="text-align:center"><img src="rain.png" height="64"></td>
     					<td>Regen</td>
-    					<td> <span id="rainoverall">-</span></td>
+    					<td> <span id="rain">-</span></td>
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="wind.png" height="50"></td>
@@ -69,7 +70,7 @@
   					</tr>
  					<tr>
     					<td style="text-align:center"><img src="updated.png" height="64"></td>
-    					<td>Letzte Meldung</td>
+    					<td>Meldung</td>
     					<td><span id="updated">-</span></td>
   					</tr>
 				</table>
@@ -110,6 +111,12 @@
 		<script>
 
 			//	TODO, multi-language-support: https://www.youtube.com/watch?v=PaJrDAmrOB4
+			let windDirectionsArray = [ ['N', 'Nord'], ['NNE', 'Nordnordost'], ['NE', 'Nordost'], ['ENE', 'Ostnordostt'],
+					['E', 'Ost'], ['ESE', 'Osts&uuml;dost'], ['SE', 'S&uuml;dost'], ['SSE', 'S&uuml;ds&uuml;dost'],
+					['S', 'S&uuml;d'], ['SSW', 'S&uuml;ds&uuml;dwest'], ['SW', 'S&uuml;dwest'], ['WSW', 'Wests&uuml;west'],
+					['W', 'West'], ['WNW', 'Westnordwest'], ['NW', 'Nordwest'], ['NNW', 'Nordnordwest'] ];
+
+			let windDirections = new Map(windDirectionsArray)
 
 			function getWeatherData() {
 				var xhttp = new XMLHttpRequest();
@@ -118,27 +125,62 @@
 
 						var jsonObj = JSON.parse(this.responseText);
 
-						document.getElementById("temperature").innerHTML = jsonObj.weather.temperature=="-"?"-":jsonObj.weather.temperature + " &#8451;";
+						var temperature = "-";
+
+						if (jsonObj.weather.temperature!="-") {
+							temperature = jsonObj.weather.temperature + " &#8451;";
+
+							if (jsonObj.aggregated.mintemperature!="-"&&jsonObj.aggregated.maxtemperature!="-")
+								temperature = temperature + " (&mapstodown;" + jsonObj.aggregated.mintemperature + " &mapstoup;"  + jsonObj.aggregated.maxtemperature + ")"
+						}
+						document.getElementById("temperature").innerHTML = temperature;
+
 						document.getElementById("humidity").innerHTML = jsonObj.weather.humidity=="-"?"-":jsonObj.weather.humidity + " %rH";
-						document.getElementById("pressure").innerHTML = jsonObj.weather.pressure=="-"?"-":jsonObj.weather.pressure + " hPa";
-						document.getElementById("rainoverall").innerHTML = jsonObj.weather.rainoverall=="-"?"-":jsonObj.weather.rainoverall + " mm";
 
-						var wind = "-"
+						var pressure = "-";
 
-						if (jsonObj.weather.windspeed=="-")
+						if (jsonObj.weather.pressure!="-") {
+							pressure = jsonObj.weather.pressure + " hPa"
+							if (jsonObj.aggregated.barotrend!="-") {
+								if (jsonObj.aggregated.barotrend>1)
+									pressure = pressure + " steigend";
+								else if (jsonObj.aggregated.barotrend<-1)
+									pressure = pressure + " fallend";
+							}
+						}
+						document.getElementById("pressure").innerHTML = pressure;
+
+						var rain = "-";
+
+						if (jsonObj.aggregated.rainhour=="-")
+							rain = "-";
+						else {
+							rain = jsonObj.aggregated.rainhour + " mm/h";
+
+							if (jsonObj.aggregated.rainday!="-")
+								rain = rain + ", " + jsonObj.aggregated.rainday + " mm/d";
+						}
+						document.getElementById("rain").innerHTML = rain;
+
+						var wind = "-";
+
+						if (jsonObj.aggregated.wind=="-")
 							if (jsonObj.weather.winddirection=="-")
-								wind = "-"
+								wind = "-";
 							else
-								wind = jsonObj.weather.winddirection
-						else
-							if (jsonObj.weather.winddirection=="-")
-								wind = jsonObj.weather.windspeed + " m/s"
-							else
-								wind = jsonObj.weather.windspeed + " m/s, " + jsonObj.weather.winddirection
-						document.getElementById("wind").innerHTML = wind
+								wind = jsonObj.weather.winddirection;
+						else {
+							wind = jsonObj.aggregated.wind + " m/s";
+							if (jsonObj.aggregated.gusts!="-"&&jsonObj.aggregated.gusts!=jsonObj.aggregated.wind)
+								wind = wind + " (B&ouml;en " + jsonObj.aggregated.gusts + " m/s)";
+
+							if (jsonObj.weather.winddirection!="-")
+								wind = wind + " " + windDirections.get(jsonObj.weather.winddirection);
+						}
+						document.getElementById("wind").innerHTML = wind;
 
 						document.getElementById("batterypercentage").innerHTML = jsonObj.weather.batterypercentage=="-"?"-":jsonObj.weather.batterypercentage + " %";
-						document.getElementById("updated").innerHTML = jsonObj.updated;
+						document.getElementById("updated").innerHTML = jsonObj["updated-de"];
 					}
 				};
 				xhttp.open("GET", "weatherdata.json", true);

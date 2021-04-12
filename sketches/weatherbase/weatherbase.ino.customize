@@ -10,6 +10,9 @@
 #include <CalibrationPacket.h>
 #include <HC12.h>
 
+#include "History.h"
+#include "DailyMinMax.h"
+
 //  weather data
 
 WeatherPacket weatherPacket;
@@ -28,6 +31,23 @@ static void sendCalibration() {
   }
   
   HC12.write(packetBinary, packetSize);
+}
+
+//  aggregated / post processed values
+
+History windHistory("wind", 10*60); // wind speed samples, avg is wind, max is gust; 10 minutes horizon
+History rainHistory("rain", 60*60); // rain samples, range is rain in last hour
+History barometricHistory("barometer", 30*60); // barometric pressure samples, using raising / falling
+
+DailyMinMax temperatureMinMax("temperature"); // collect min and max temperatures of the day
+DailyMinMax rainMinMax("rain"); // collect the in-day rain amount
+
+static void updateAggregates() {
+  temperatureMinMax.addSample(weatherPacket.mTemperatureDegreeCelsius);
+  windHistory.addSample(weatherPacket.mWindSpeedMpS);
+  rainHistory.addSample(weatherPacket.mAccumulatedRainMM);
+  rainMinMax.addSample(weatherPacket.mAccumulatedRainMM);
+  barometricHistory.addSample(weatherPacket.mPressureHPA);
 }
 
 //  web server
@@ -71,12 +91,60 @@ class WeatherWebServer:public BolbroWebServer
       json += "\t\"weather\" : " + weatherPacket.json("\t") + ",\n";
     
       if (lastPacketUpdate) {
+        //  set "German" representation
+        char timeCStr[32];
+        struct tm *t = localtime(&lastPacketUpdate);
+        strftime (timeCStr, 31, "%d. %b %X", t);
+        if (*timeCStr=='0')
+          json += "\t\"updated-de\" : \"" + String(timeCStr+1) + "\",\n";
+        else
+          json += "\t\"updated-de\" : \"" + String(timeCStr) + "\",\n";
+
+        //  set default representation
         String timeStr(ctime(&lastPacketUpdate));
-    
-        json += "\t\"updated\" : \"" + timeStr.substring(0, timeStr.length()-1) + "\"\n";
-      } else
-        json += "\t\"updated\" : \"-\"\n";
-    
+        timeStr.replace("  ", " ");
+        timeStr.replace("\n", "");
+        json += "\t\"updated\" : \"" + timeStr + "\",\n";
+      } else {
+        json += "\t\"updated-de\" : \"-\",\n";
+        json += "\t\"updated\" : \"-\",\n";
+      }
+      
+      json += "\t\"aggregated\" : {\n";
+
+      if (temperatureMinMax.hasSamples()) {
+        json += "\t\t\"mintemperature\" : " + String(temperatureMinMax.min(), 1) + ",\n";
+        json += "\t\t\"maxtemperature\" : " + String(temperatureMinMax.max(), 1) + ",\n";
+      } else {
+        json += "\t\t\"mintemperature\" : \"-\",\n";
+        json += "\t\t\"maxtemperature\" : \"-\",\n";        
+      }
+
+      if (windHistory.hasSamples()) {
+        json += "\t\t\"wind\" : " + String(windHistory.avg()) + ",\n";
+        json += "\t\t\"gusts\" : " + String(windHistory.max()) + ",\n";
+      } else {
+        json += "\t\t\"wind\" : \"-\",\n";
+        json += "\t\t\"gusts\" : \"-\",\n";        
+      }
+
+      if (barometricHistory.hasSamples())
+        json += "\t\t\"barotrend\" : " + String(barometricHistory.change(), 1) + ",\n";        
+      else
+        json += "\t\t\"barotrend\" : \"-\",\n";
+
+      if (rainMinMax.hasSamples())
+        json += "\t\t\"rainday\" : " + String(rainMinMax.range()) + ",\n";        
+      else
+        json += "\t\t\"rainday\" : \"-\",\n";
+
+      if (rainHistory.hasSamples())
+        json += "\t\t\"rainhour\" : " + String(rainHistory.range()) + "\n";        
+      else
+        json += "\t\t\"rainhour\" : \"-\"\n";
+      
+      json += "\t}\n";
+ 
       json += "}\n";
     
       send(200, "application/json", json);
@@ -238,6 +306,9 @@ void loop()
 
       //  station is up currently, "return" calibration / configuration parameters
       sendCalibration();
+
+      //  derive aggregated values from raw values
+      updateAggregates();
 
       //  we have a verified set of data here, send it to homeautomation
       propagateToOpenHAB();
