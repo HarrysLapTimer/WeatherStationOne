@@ -26,27 +26,35 @@ class CalibrationPacket : public Packet {
     //  settings
     unsigned long mSecondsBetweenReports;
 
+		float mInclination;
+		float mAzimuth;
+
   private:
 
     //  CRC16 checksum
     uint16_t  mCRC16;
 
-  public:
+	private:
 
-    CalibrationPacket() : Packet() {
+		void setDefaults() {
 			mBucketTriggerVolume = DEFAULT_BUCKET_TRIGGER_VOLUME;
 			mWindSpeedFactor = DEFAULT_WINDSPEED_FACTOR;
 			mMeasurementHeight = DEFAULT_MEASUREMENT_HEIGHT;
 			mSecondsBetweenReports = DEFAULT_SECONDS_BETWEEN_REPORTS;
+  		mInclination = 30.0f;
+  		mAzimuth = 180.0f;
+		}
+
+  public:
+
+    CalibrationPacket() : Packet() {
+    	setDefaults();
     }
 
     CalibrationPacket(bool &initializePacketMembers) : Packet() {
     	//	restore state from preferences
 			if (initializePacketMembers) {
-	  		mBucketTriggerVolume = DEFAULT_BUCKET_TRIGGER_VOLUME;
-  			mWindSpeedFactor = DEFAULT_WINDSPEED_FACTOR;
-  			mMeasurementHeight = DEFAULT_MEASUREMENT_HEIGHT;
-  			mSecondsBetweenReports = DEFAULT_SECONDS_BETWEEN_REPORTS;
+	    	setDefaults();
 
   			//	initialize only once; working when in RTC memory
   			initializePacketMembers = false;
@@ -58,6 +66,8 @@ class CalibrationPacket : public Packet {
   		mWindSpeedFactor = Bolbro.prefGetFloat("speedFactor", DEFAULT_WINDSPEED_FACTOR);
   		mMeasurementHeight = Bolbro.prefGetFloat("height", DEFAULT_MEASUREMENT_HEIGHT);
   		mSecondsBetweenReports = Bolbro.prefGetUnsignedLong("reportSecs", DEFAULT_SECONDS_BETWEEN_REPORTS);
+  		mInclination = Bolbro.prefGetFloat("inclination", 30.0f);
+  		mAzimuth = Bolbro.prefGetFloat("azimuth", 180.0f);
 		}
 
   	void save() {
@@ -66,13 +76,12 @@ class CalibrationPacket : public Packet {
   		Bolbro.prefSetFloat("speedFactor", mWindSpeedFactor);
   		Bolbro.prefSetFloat("height", mMeasurementHeight);
   	  Bolbro.prefSetUnsignedLong("reportSecs", mSecondsBetweenReports);
+  	  Bolbro.prefSetFloat("inclination", mInclination);
+  	  Bolbro.prefSetFloat("azimuth", mAzimuth);
   	}
 
   	void revertToDefaults() {
-		  mBucketTriggerVolume = DEFAULT_BUCKET_TRIGGER_VOLUME;
-  		mWindSpeedFactor = DEFAULT_WINDSPEED_FACTOR;
-  		mMeasurementHeight = DEFAULT_MEASUREMENT_HEIGHT;
-  		mSecondsBetweenReports = DEFAULT_SECONDS_BETWEEN_REPORTS;
+    	setDefaults();
   		save();
   	}
 
@@ -98,6 +107,14 @@ class CalibrationPacket : public Packet {
 			Serial.print(mSecondsBetweenReports);
 			Serial.println(" s");
 
+			Serial.print("sun inclination: ");
+			Serial.print(mInclination, 1);
+			Serial.println(" degree");
+
+			Serial.print("sun azimuth: ");
+			Serial.print(mAzimuth, 1);
+			Serial.println(" degree");
+
 			Serial.print("checksum: ");
 			Serial.print(mCRC16);
 			Serial.println(mCRC16==crc16()?" correct":" wrong");
@@ -111,6 +128,8 @@ class CalibrationPacket : public Packet {
       json += linePrefix + "\t\"speedFactor\" : " + String(mWindSpeedFactor, 2) +",\n";
       json += linePrefix + "\t\"height\" : " + String(mMeasurementHeight, 2) +",\n";
       json += linePrefix + "\t\"reportSecs\" : " + String(mSecondsBetweenReports) +"\n";
+      json += linePrefix + "\t\"inclination\" : " + String(mInclination, 1) +"\n";
+      json += linePrefix + "\t\"azimuth\" : " + String(mAzimuth, 1) +"\n";
 
       json += linePrefix + "}";
 

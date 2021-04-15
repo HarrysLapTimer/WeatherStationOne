@@ -54,40 +54,25 @@ class WeatherPacket : public Packet {
       mBatteryVoltage = UNDEFINEDVALUE;
     }
 
-#if 1
-	float batteryPercentage() {
-		float cellVoltage = mBatteryVoltage/NUMCELLS;
-		float batteryPercentage = 0;
-		//	characteristics for a NCR18650BD Lithium-Ion cell
-		if (cellVoltage>2.0f) {
-			float remainingCapacity;
-			if (cellVoltage<4.3f)
-				remainingCapacity = (cellVoltage-2.0)/(4.3-2.0)*3000.0;
-			else
-				remainingCapacity = 3000.0+(cellVoltage-4.3)/(4.7-4.3)*300.0;
+		float batteryPercentage() {
+			float cellVoltage = mBatteryVoltage/NUMCELLS;
+			float batteryPercentage = 0;
+			//	characteristics for a NCR18650BD Lithium-Ion cell
+			if (cellVoltage>2.0f) {
+				float remainingCapacity;
+				if (cellVoltage<4.3f)
+					remainingCapacity = (cellVoltage-2.0)/(4.3-2.0)*3000.0;
+				else
+					remainingCapacity = 3000.0+(cellVoltage-4.3)/(4.7-4.3)*300.0;
 
-			batteryPercentage = 100*remainingCapacity/3200.0;
+				batteryPercentage = 100*remainingCapacity/3200.0;
+			}
+
+			if (batteryPercentage>100.0f)
+				batteryPercentage = 100.0f;
+
+			return batteryPercentage;
 		}
-
-		if (batteryPercentage>100.0f)
-			batteryPercentage = 100.0f;
-
-		return batteryPercentage;
-	}
-#else
-    float batteryPercentage() {
-      //  derive percentage with cell voltage > 3.87 = 100% and < 3.4 = 0%
-      float cellVoltage = mBatteryVoltage/NUMCELLS;
-      float batteryPercentage = 100*(cellVoltage-3.4)/(3.87-3.4);
-
-      if (batteryPercentage>100)
-        batteryPercentage = 100;
-      if (batteryPercentage<0)
-        batteryPercentage = 0;
-
-      return batteryPercentage;
-    }
-#endif
 
     void printSerial() {
     	Serial.print("magic byte: ");

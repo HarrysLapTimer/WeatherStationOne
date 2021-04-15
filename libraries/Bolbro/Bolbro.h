@@ -44,6 +44,7 @@ class BolbroClass
 		//	the default (Germany)
 		void configureTime();
 		void setTimezone(int gmtOffset_sec, int daylightOffset_sec);
+		bool timeConfigured();
 
 		//	openHAB access
 

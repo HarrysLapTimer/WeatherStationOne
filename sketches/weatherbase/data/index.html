@@ -69,6 +69,11 @@
     					<td><span id="batterypercentage">-</span></td>
   					</tr>
  					<tr>
+    					<td style="text-align:center"><img src="sun.png" height="64"></td>
+    					<td>Sonne</td>
+    					<td><span id="sun">-</span></td>
+  					</tr>
+ 					<tr>
     					<td style="text-align:center"><img src="updated.png" height="64"></td>
     					<td>Meldung</td>
     					<td><span id="updated">-</span></td>
@@ -178,6 +183,14 @@
 								wind = wind + " " + windDirections.get(jsonObj.weather.winddirection);
 						}
 						document.getElementById("wind").innerHTML = wind;
+
+						var sun = "-";
+
+						if (jsonObj.sun.azimuth=="-"||jsonObj.sun.inclination=="-")
+							sun = "-";
+						else
+							sun = "<img src='inclination.png' height='32' style='vertical-align:middle'> " + jsonObj.sun.inclination + "&deg; <img src='azimuth.png' height='40' style='vertical-align:middle'> " + jsonObj.sun.azimuth + "&deg;";
+						document.getElementById("sun").innerHTML = sun;
 
 						document.getElementById("batterypercentage").innerHTML = jsonObj.weather.batterypercentage=="-"?"-":jsonObj.weather.batterypercentage + " %";
 						document.getElementById("updated").innerHTML = jsonObj["updated-de"];

@@ -53,7 +53,7 @@ Finally, the sketches:
 - make sure Serial Monitor is closed and hit Tools/ESP32 Sketch Data Upload; this will upload the web content
 - compile and flash `weatherstation`
 
-Once `weatherbase` is powered, connect your browser to `http://weatherbasedebug.local`
+Once `weatherbase` is powered, connect your browser to `http://weatherbasedebug.local` (in case DEBUG is defined as 1 - `http://weatherbase.local` otherwise).
 
 ## Screen Shots
 

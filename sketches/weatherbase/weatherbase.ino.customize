@@ -12,6 +12,7 @@
 
 #include "History.h"
 #include "DailyMinMax.h"
+#include "Sun.h"
 
 //  weather data
 
@@ -43,11 +44,16 @@ DailyMinMax temperatureMinMax("temperature"); // collect min and max temperature
 DailyMinMax rainMinMax("rain"); // collect the in-day rain amount
 
 static void updateAggregates() {
-  temperatureMinMax.addSample(weatherPacket.mTemperatureDegreeCelsius);
-  windHistory.addSample(weatherPacket.mWindSpeedMpS);
-  rainHistory.addSample(weatherPacket.mAccumulatedRainMM);
-  rainMinMax.addSample(weatherPacket.mAccumulatedRainMM);
-  barometricHistory.addSample(weatherPacket.mPressureHPA);
+  if (weatherPacket.mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
+    temperatureMinMax.addSample(weatherPacket.mTemperatureDegreeCelsius);
+  if (weatherPacket.mWindSpeedMpS!=UNDEFINEDVALUE)
+    windHistory.addSample(weatherPacket.mWindSpeedMpS);
+  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
+    rainHistory.addSample(weatherPacket.mAccumulatedRainMM);
+  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
+    rainMinMax.addSample(weatherPacket.mAccumulatedRainMM);
+  if (weatherPacket.mPressureHPA!=UNDEFINEDVALUE)
+    barometricHistory.addSample(weatherPacket.mPressureHPA);
 }
 
 //  web server
@@ -73,6 +79,8 @@ class WeatherWebServer:public BolbroWebServer
       on("/updated.png", [this]() { loadFromSpiffs("/updated.png"); });
       on("/sun.png", [this]() { loadFromSpiffs("/sun.png"); });
       on("/rain.png", [this]() { loadFromSpiffs("/rain.png"); });
+      on("/inclination.png", [this]() { loadFromSpiffs("/inclination.png"); });
+      on("/azimuth.png", [this]() { loadFromSpiffs("/azimuth.png"); });
 
       //  dynamic stuff
       on("/weatherdata.json", [this]() { handleWeatherData(); });
@@ -95,11 +103,32 @@ class WeatherWebServer:public BolbroWebServer
         char timeCStr[32];
         struct tm *t = localtime(&lastPacketUpdate);
         strftime (timeCStr, 31, "%d. %b %X", t);
-        if (*timeCStr=='0')
-          json += "\t\"updated-de\" : \"" + String(timeCStr+1) + "\",\n";
-        else
-          json += "\t\"updated-de\" : \"" + String(timeCStr) + "\",\n";
 
+        String updatedStr(*timeCStr=='0'?timeCStr+1:timeCStr);
+
+        static struct {
+          const char *shortMonth;
+          const char *longMonth;
+        }       months[] = {
+          { "Jan", "Januar" },
+          { "Feb", "Februar" },
+          { "Mar", "M&auml;rz" },
+          { "Apr", "April" },
+          { "May", "Mai" },
+          { "Jun", "Juni" },
+          { "Jul", "Juli" },
+          { "Aug", "August" },
+          { "Sep", "September" },
+          { "Oct", "Oktober" },
+          { "Nov", "November" },
+          { "Dec", "Dezember" }
+        };
+
+        for (int i = 0; i<12; i++)
+          updatedStr.replace(months[i].shortMonth, months[i].longMonth);
+
+        json += "\t\"updated-de\" : \"" + updatedStr + "\",\n";
+        
         //  set default representation
         String timeStr(ctime(&lastPacketUpdate));
         timeStr.replace("  ", " ");
@@ -109,6 +138,17 @@ class WeatherWebServer:public BolbroWebServer
         json += "\t\"updated-de\" : \"-\",\n";
         json += "\t\"updated\" : \"-\",\n";
       }
+
+      json += "\t\"sun\" : {\n";
+
+      if (calibrationPacket.mInclination == 30.0f && calibrationPacket.mAzimuth == 180.0f) {
+        json += "\t\t\"inclination\" : \"-\",\n";
+        json += "\t\t\"azimuth\" : \"-\"\n";        
+      } else {      
+        json += "\t\t\"inclination\" : " + String(calibrationPacket.mInclination, 1) +",\n";
+        json += "\t\t\"azimuth\" : " + String(calibrationPacket.mAzimuth, 1) +"\n";
+      }
+      json += "\t},\n";
       
       json += "\t\"aggregated\" : {\n";
 
@@ -292,13 +332,16 @@ void setup()
 void loop() 
 {
   static unsigned long lastMillisLEDTurnedOn = 0;
-  
+  static unsigned long lastMillisSunCalculated = 0;
+
+  unsigned long currentMillis = millis();
+
   //  Handle requests to server
   server.handleClient();
 
   //  Handle input from station
   if (HC12.available()) {
-    lastMillisLEDTurnedOn = millis();
+    lastMillisLEDTurnedOn = currentMillis;
     digitalWrite(LED_PIN, HIGH); // high when data is received
     if (weatherPacket.decodeByte(HC12.read())) {
       weatherPacket.printSerial();
@@ -317,13 +360,19 @@ void loop()
 
   //  Maintain LED status, turn off after 2 seconds of inactivity
   //  and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
-  unsigned long secondsPassed = (millis()-lastMillisLEDTurnedOn)/MS2S_FACTOR;
-
+  unsigned long secondsPassed = (currentMillis-lastMillisLEDTurnedOn)/MS2S_FACTOR;
   if (secondsPassed>3*calibrationPacket.mSecondsBetweenReports)
     //  blink mode
     digitalWrite(LED_PIN, secondsPassed%2?HIGH:LOW);
   else if (secondsPassed>2)
     digitalWrite(LED_PIN, LOW); // low once no activity detected
+
+  //  Maintain sun position
+  secondsPassed = (currentMillis-lastMillisSunCalculated)/MS2S_FACTOR;
+  if (secondsPassed>60) { // update once a minute
+    calcSun(&calibrationPacket.mAzimuth, &calibrationPacket.mInclination);
+    lastMillisSunCalculated = currentMillis;
+  }
 
   Bolbro.loop();
 }

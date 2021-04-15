@@ -230,6 +230,11 @@ void BolbroClass::setTimezone(int gmtOffset_sec, int daylightOffset_sec) {
 	configureTime();
 }
 
+bool BolbroClass::timeConfigured() {
+	return mConfigureTimeStatus == ConfigureTimeSucceeded;
+}
+
+
 /* --------------------------------------------------------------------------------
 	openHAB access
    -------------------------------------------------------------------------------- */

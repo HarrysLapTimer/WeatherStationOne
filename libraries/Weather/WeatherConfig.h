@@ -16,6 +16,10 @@
 
 #define NUM_DIRECTIONS_PER_PIN 4
 
+//	for sun position calcuation
+#define LATITUDE (54.0+49.361/60.0)
+#define LONGITUDE (9.0+36.987/60.0)
+
 //  wind vane
 #define WIND_VANE_S0 15 // addressinf direction
 #define WIND_VANE_S1 2
