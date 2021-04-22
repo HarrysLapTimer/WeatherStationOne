@@ -248,8 +248,22 @@ static void propagateTemperatureEtAll(WeatherReport &report) {
         Serial.println("no temperature sensor found...");
         reported = true;
       }
-    } else
-      report.addTemperature(bme.readTemperature(), bme.readPressure()/100.0f, bme.readHumidity());
+    } else {
+      int numRetries = 10;
+
+      do {      
+        float temperature = bme.readTemperature();
+        float pressure = bme.readPressure();
+        float humidity = bme.readHumidity();
+
+        if (temperature!=NAN && pressure!=NAN && humidity!=NAN) {
+          report.addTemperature(temperature, pressure/100.0f, humidity);
+          break;      
+        }
+
+        numRetries--;
+      } while (numRetries);
+    }
   }
 }
 
@@ -274,7 +288,7 @@ static void propagateBatteryVoltage(WeatherReport &report) {
   }
 
   float voltageDividorMeasured = 2.45; // customize
-  int voltageDividorMeasuredADCValue = 2870;// customize
+  int voltageDividorMeasuredADCValue = 2870; // customize, must not be 4095
 
   //  do a linear interpolation towards known end points zero and 3.3V
   float voltage = voltageDividorMeasured;
@@ -370,10 +384,6 @@ WeatherReport report;
 
 void setup() {
 
-  //  set up all triggers to wake up
-  esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, 1);
-  esp_sleep_enable_timer_wakeup (calibrationPacket.mSecondsBetweenReports*uS2S_FACTOR);
-
   if (DEBUG) {
     printWakeupReason();
   }
@@ -382,10 +392,21 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH); // high until deep sleep
 
+  //  configure rain PIN
+  pinMode(RAIN_PIN, INPUT);
+  bool currentRain = digitalRead(RAIN_PIN);
+
+  //  set up all triggers to wake up
+  esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, currentRain?0:1); // wake up on every change
+  esp_sleep_enable_timer_wakeup (calibrationPacket.mSecondsBetweenReports*uS2S_FACTOR);
+
   //  handle wakup cause
   switch(esp_sleep_get_wakeup_cause()) {
     case ESP_SLEEP_WAKEUP_EXT0:
-      handleRainState();
+      //  wakeup has been set either for state 1 or 0
+      //  increase count only in case we are in 1
+      if (currentRain) 
+        handleRainState();
       //  goto deep sleep instantly
       deepSleep();
       break;

@@ -132,15 +132,20 @@ class WeatherPacket : public Packet {
       else
         json += linePrefix + "\t\"rainoverall\" : \"" STRINGNOTINITIALIZED "\",\n";
 
-      if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE) {
+      if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
         json += linePrefix + "\t\"temperature\" : " + String(mTemperatureDegreeCelsius, 1) +",\n";
-        json += linePrefix + "\t\"humidity\" : " + String(mHumidityPercent, 1) +",\n";
-        json += linePrefix + "\t\"pressure\" : " + String(mPressureHPA, 1) +",\n";
-      } else {
+      else
         json += linePrefix + "\t\"temperature\" : \"" STRINGNOTINITIALIZED "\",\n";
+
+      if (mHumidityPercent!=UNDEFINEDVALUE)
+        json += linePrefix + "\t\"humidity\" : " + String(mHumidityPercent, 1) +",\n";
+      else
         json += linePrefix + "\t\"humidity\" : \"" STRINGNOTINITIALIZED "\",\n";
+
+      if (mPressureHPA!=UNDEFINEDVALUE)
+        json += linePrefix + "\t\"pressure\" : " + String(mPressureHPA, 1) +",\n";
+      else
         json += linePrefix + "\t\"pressure\" : \"" STRINGNOTINITIALIZED "\",\n";
-      }
 
       if (mWindDirection[0])
         json += linePrefix + "\t\"winddirection\" : \"" + String(mWindDirection) +"\",\n";

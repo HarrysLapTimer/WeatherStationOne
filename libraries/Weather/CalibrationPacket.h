@@ -127,9 +127,9 @@ class CalibrationPacket : public Packet {
       json += linePrefix + "\t\"bucketVol\" : " + String(mBucketTriggerVolume, 1) +",\n";
       json += linePrefix + "\t\"speedFactor\" : " + String(mWindSpeedFactor, 2) +",\n";
       json += linePrefix + "\t\"height\" : " + String(mMeasurementHeight, 2) +",\n";
+      json += linePrefix + "\t\"inclination\" : " + String(mInclination, 1) +",\n";
+      json += linePrefix + "\t\"azimuth\" : " + String(mAzimuth, 1) +",\n";
       json += linePrefix + "\t\"reportSecs\" : " + String(mSecondsBetweenReports) +"\n";
-      json += linePrefix + "\t\"inclination\" : " + String(mInclination, 1) +"\n";
-      json += linePrefix + "\t\"azimuth\" : " + String(mAzimuth, 1) +"\n";
 
       json += linePrefix + "}";
 

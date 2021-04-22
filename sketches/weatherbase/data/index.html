@@ -17,6 +17,10 @@
 					"footer";
 				grid-gap: 10px;
 			}
+
+			option { font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; }
+			selection { font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; }
+
 			.item-header { grid-area: header; padding-top: 1em; padding-left: 2em; padding-right: 2em; }
 			.item-aktuell { grid-area: aktuell; padding-left: 2em; padding-right: 2em; }
 			.item-station { grid-area: station; padding-left: 2em; padding-right: 2em; }
@@ -116,12 +120,14 @@
 		<script>
 
 			//	TODO, multi-language-support: https://www.youtube.com/watch?v=PaJrDAmrOB4
-			let windDirectionsArray = [ ['N', 'Nord'], ['NNE', 'Nordnordost'], ['NE', 'Nordost'], ['ENE', 'Ostnordostt'],
+			let windDirectionsArray = [ ['N', 'Nord'], ['NNE', 'Nordnordost'], ['NE', 'Nordost'], ['ENE', 'Ostnordost'],
 					['E', 'Ost'], ['ESE', 'Osts&uuml;dost'], ['SE', 'S&uuml;dost'], ['SSE', 'S&uuml;ds&uuml;dost'],
-					['S', 'S&uuml;d'], ['SSW', 'S&uuml;ds&uuml;dwest'], ['SW', 'S&uuml;dwest'], ['WSW', 'Wests&uuml;west'],
+					['S', 'S&uuml;d'], ['SSW', 'S&uuml;ds&uuml;dwest'], ['SW', 'S&uuml;dwest'], ['WSW', 'Wests&uuml;dwest'],
 					['W', 'West'], ['WNW', 'Westnordwest'], ['NW', 'Nordwest'], ['NNW', 'Nordnordwest'] ];
 
-			let windDirections = new Map(windDirectionsArray)
+			let windDirections = new Map(windDirectionsArray);
+
+			let windSpeedUnit = "Bf";
 
 			function getWeatherData() {
 				var xhttp = new XMLHttpRequest();
@@ -169,15 +175,41 @@
 
 						var wind = "-";
 
-						if (jsonObj.aggregated.wind=="-")
+						if (jsonObj.aggregated.windmps=="-")
 							if (jsonObj.weather.winddirection=="-")
 								wind = "-";
 							else
 								wind = jsonObj.weather.winddirection;
 						else {
-							wind = jsonObj.aggregated.wind + " m/s";
-							if (jsonObj.aggregated.gusts!="-"&&jsonObj.aggregated.gusts!=jsonObj.aggregated.wind)
-								wind = wind + " (B&ouml;en " + jsonObj.aggregated.gusts + " m/s)";
+							switch(windSpeedUnit) {
+								case "m/s":
+									wind = jsonObj.aggregated.windmps;
+									break;
+								case "kn":
+									wind = jsonObj.aggregated.windknots;
+									break;
+								case "Bf":
+									wind = jsonObj.aggregated.windbeaufort;
+									break;
+							}
+
+							wind = wind + " <button style='background-color: #60c9f8; font-size: 27pt; padding: 0px;' type='button' onclick='changeWindSpeedUnit()'>" + windSpeedUnit + "</button>";
+
+								switch(windSpeedUnit) {
+									case "m/s":
+										if (jsonObj.aggregated.gustsmps!="-"&&jsonObj.aggregated.gustsmps!=jsonObj.aggregated.windmps)
+											wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsmps + ")";
+										break;
+									case "kn":
+										if (jsonObj.aggregated.gustsknots!="-"&&jsonObj.aggregated.gustsknots!=jsonObj.aggregated.windknots)
+											wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsknots + ")";
+										break;
+									case "Bf":
+										if (jsonObj.aggregated.gustsbeaufort!="-"&&jsonObj.aggregated.gustsbeaufort!=jsonObj.aggregated.windbeaufort)
+											wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsbeaufort + ")";
+										break;
+								}
+
 
 							if (jsonObj.weather.winddirection!="-")
 								wind = wind + " " + windDirections.get(jsonObj.weather.winddirection);
@@ -200,8 +232,23 @@
 				xhttp.send();
 			}
 
-			function administration(num) {
+			function administration() {
 				window.location.href = "administration.html";
+			}
+
+			function changeWindSpeedUnit()  {
+				switch(windSpeedUnit) {
+					case "m/s":
+						windSpeedUnit = "kn";
+						break;
+					case "kn":
+						windSpeedUnit = "Bf";
+						break;
+					case "Bf":
+						windSpeedUnit = "m/s";
+						break;
+				}
+				getWeatherData();
 			}
 
 			//	one time calls
