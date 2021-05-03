@@ -16,7 +16,7 @@
 
 #define NUM_DIRECTIONS_PER_PIN 4
 
-//	for sun position calcuation
+//	for sun position calculation
 #define LATITUDE (54.0+49.361/60.0)
 #define LONGITUDE (9.0+36.987/60.0)
 
@@ -53,6 +53,19 @@
 #define SDA_PIN 21 // documentation only
 #define SCL_PIN 22 // documentation only
 
+//	solar tracker
+#define USE_TRACKER false
+#define TRACKER_HOME_DEGREE 66.0 // degree at which the magnet triggers the reed contact
+#define TRACKER_MIN_DEGREE 60.0
+#define TRACKER_MAX_DEGREE (180.0+(180.0-TRACKER_MIN_DEGREE))
+#define STEPS_PER_REVOLUTION (360/11.25*63.68395) // 28BYJ-48 with 11.25° per step and a 1:63.68395 gearbox
+
+#define STEPPER_IN1_PIN 19 // 15 35
+#define STEPPER_IN2_PIN 25 // 2 25
+#define STEPPER_IN3_PIN 26 // 0 26
+#define STEPPER_IN4_PIN 13  // 4 13
+#define TRACKER_CALIBRATION_PIN 23
+
 //  HC-12
 #define HC12_RXD_PIN 16 // Serial2 RX
 #define HC12_TXD_PIN 17 // Serial2 TX
@@ -65,4 +78,4 @@
 
 //  other constants
 #define MS2S_FACTOR 1000ul // conversion factor for milli seconds to seconds
-#define uS2S_FACTOR 1000000ul // conversion factor for micro seconds to seconds
+#define uS2S_FACTOR ((uint64_t)1000000ul) // conversion factor for micro seconds to seconds

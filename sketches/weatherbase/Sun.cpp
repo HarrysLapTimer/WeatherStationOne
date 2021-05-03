@@ -4,6 +4,7 @@
 #include "WeatherConfig.h"
 #include <Math.h>
 #include <Bolbro.h>
+#include <time.h>
 
 //  sun calculation code base on:
 
@@ -351,42 +352,20 @@ bool calcSun (float *azimuthP, float *inclinationP)
     month_number = dateTime->tm_mon+1;
     day_of_month = dateTime->tm_mday;
   
-    //TRACE (TRACEGPSCALC, IndentUnchanged,
-    //    "year_number: %hu, month_number: %hu, day_of_month: %hu",
-    //    (UInt16) year_number, (UInt16) month_number, (UInt16) day_of_month);
-    
     if (make_julian_day (day_of_month, month_number, year_number, &julian_day)==0)
-    {
-      //TRACE (TRACEGPSCALC, IndentUnchanged, "julian_day: %hu", (UInt16) julian_day);
-      
+    {      
       if (declination_sun (year_number, julian_day, lambda, &delta)==0)
-      {
-        //TRACE (TRACEGPSCALC, IndentUnchanged,
-        //  "delta (solar declination angle): %s (%hd" DEGREESIGNCP1252 ")",
-        //  TRACEDOUBLE (delta), (Int16) Rad2Deg (delta));
-  
+      {  
         UT = (double) dateTime->tm_hour+((double) dateTime->tm_min+(double) dateTime->tm_sec/60.0)/60.0;
-  
-        //TRACE (TRACEGPSCALC, IndentUnchanged, "universal time: %s", TRACEDOUBLE (UT));
-  
+    
         if (Day_Angle (julian_day, &day_angle)==0)
         {
           if (UT_to_LAT (UT, day_angle, lambda, &LAT)==0)
-          {
-            //TRACE (TRACEGPSCALC, IndentUnchanged, "solar time: %s", TRACEDOUBLE (LAT));
-            
+          {            
             if (solar_hour_angle (LAT, &omega)==0)
-            {
-              //TRACE (TRACEGPSCALC, IndentUnchanged,
-              //  "omega (solar hour angle): %s (%hd" DEGREESIGNCP1252 ")",
-              //  TRACEDOUBLE (omega), (Int16)Rad2Deg (omega));
-              
+            {              
               if (elevation_zenith_sun (phi_g, delta, omega, &gamma, &theta)==0)
               {
-                //TRACE (TRACEGPSCALC, IndentUnchanged,
-                //  "gamma (solar altitude or elevation angle): %s (%hd" DEGREESIGNCP1252 ")",
-                //  TRACEDOUBLE (gamma), (Int16)Rad2Deg (gamma));
-                
                 if (gamma>0.0)
                 {
                   //  gamma==0.0 when on or behind horizon
@@ -396,11 +375,11 @@ bool calcSun (float *azimuthP, float *inclinationP)
                         //  Northern hemisphere, alpha is positiv if west of south
                         alpha += M_PI;
   
-                      *azimuthP = rad2deg (alpha);
-                      *inclinationP = rad2deg (gamma);
-        
-                      //TRACE (TRACEGPSCALC, IndentUnchanged, "azimut: %hu" DEGREESIGNCP1252 ", elevation: %hu" DEGREESIGNCP1252, *azimut, *height);
-        
+                      if (azimuthP)
+                        *azimuthP = rad2deg (alpha);
+                      if (inclinationP)
+                        *inclinationP = rad2deg (gamma);
+                
                       result = true;
                   }
                 }

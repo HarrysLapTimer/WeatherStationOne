@@ -14,11 +14,13 @@
 				grid-template-areas:
 					"header"
 					"calibration"
+					"solartracker"
 					"footer";
 				grid-gap: 10px;
 			}
 			.item-header { grid-area: header; padding-top: 1em; padding-left: 2em; padding-right: 2em; }
 			.item-calibration { grid-area: calibration; padding-left: 2em; padding-right: 2em; }
+			.item-solartracker { grid-area: solartracker; padding-left: 2em; padding-right: 2em; }
 			.item-footer { grid-area: footer; padding-left: 2em; padding-right: 2em; }
 
 			td { font-size: 27pt; padding-right: 20px; padding-bottom: 10px; }
@@ -30,7 +32,8 @@
 				<center><img src="BolbroHaus.jpg"></img></center>
 				<h2>Administration</h2>
 				<p>Hier k&ouml;nnen diverse Parameter zur Konfiguration und Kalibrierung der Wetterstation ge&auml;ndert werden.
-					Bitte vor dem Dr&uuml;cken von <span style='background-color: #60c9f8; color: white'>&nbsp;&Auml;ndern&nbsp;</span> das Passwort eingeben.</p>
+					Bitte vor dem Dr&uuml;cken von <span style='background-color: #60c9f8; color: white'>&nbsp;&Auml;ndern&nbsp;</span>
+					oder <span style='background-color: #ff3b30; color: white'>&nbsp;Standard&nbsp;</span> das Passwort eingeben.</p>
 			</div>
 			<div class="item-calibration">
 				<h3>Kalibrierung / Konfiguration</h3>
@@ -63,6 +66,13 @@
 						<button style='background-color: gray;' type='button' onclick='goBack()'>Zur&uuml;ck</button>
 					</p>
 				</form>
+			</div>
+			<div class="item-solartracker">
+				<h3>Solartracker</h3>
+				<p>
+					<button style='background-color: #60c9f8;' type='button' onclick='calibrate()'>Kalibrieren</button>
+					<button style='background-color: gray;' type='button' onclick='testtracker()'>Testfahrt</button>
+				</p>
 			</div>
 			<div class="item-footer">
 				<p>Copyright &copy; 2021, Harald Schlangmann</p>
@@ -133,6 +143,34 @@
 				};
 				xhttp.open('POST', "revert-calibration");
 				xhttp.send(formdata);
+			}
+
+			function calibrate() {
+				var xhttp = new XMLHttpRequest();
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == XMLHttpRequest.DONE)
+						if (this.status == 200)
+    						alert('Bitte warten bis die Kalibrierung an der Station ausgef\xFChrt wurde.' );
+						else
+							alert('Fehler, Kommando nicht ausgef\xFChrt!');
+				};
+				xhttp.open("GET", "calibrate-tracker", true);
+				xhttp.send();
+			}
+
+			function testtracker() {
+				var xhttp = new XMLHttpRequest();
+
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == XMLHttpRequest.DONE)
+						if (this.status == 200)
+    						alert('Bitte warten bis die Testfahrt an der Station ausgef\xFChrt wurde.' );
+						else
+							alert('Fehler, Kommando nicht ausgef\xFChrt!');
+				};
+				xhttp.open("GET", "test-tracker", true);
+				xhttp.send();
 			}
 
     	</script>

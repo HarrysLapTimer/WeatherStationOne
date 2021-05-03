@@ -87,6 +87,7 @@ bool BolbroWebServer::loadFromSpiffs(String path)
     dataType = "application/octet-stream";
 
   sendHeader("Cache-Control", "max-age=1000");
+  setContentLength(dataFile.size());
 
   result = streamFile(dataFile, dataType) == dataFile.size();
 

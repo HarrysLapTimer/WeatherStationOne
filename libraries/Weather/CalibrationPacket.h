@@ -29,6 +29,12 @@ class CalibrationPacket : public Packet {
 		float mInclination;
 		float mAzimuth;
 
+		enum Command {
+			NoCommand,
+			CalibrateSolarTracker,
+			TestSolarTracker
+		} mCommand;
+
   private:
 
     //  CRC16 checksum
@@ -43,6 +49,7 @@ class CalibrationPacket : public Packet {
 			mSecondsBetweenReports = DEFAULT_SECONDS_BETWEEN_REPORTS;
   		mInclination = 30.0f;
   		mAzimuth = 180.0f;
+  		mCommand = NoCommand;
 		}
 
   public:
@@ -68,6 +75,7 @@ class CalibrationPacket : public Packet {
   		mSecondsBetweenReports = Bolbro.prefGetUnsignedLong("reportSecs", DEFAULT_SECONDS_BETWEEN_REPORTS);
   		mInclination = Bolbro.prefGetFloat("inclination", 30.0f);
   		mAzimuth = Bolbro.prefGetFloat("azimuth", 180.0f);
+  		mCommand = (Command) Bolbro.prefGetInt("command", NoCommand);
 		}
 
   	void save() {
@@ -78,6 +86,7 @@ class CalibrationPacket : public Packet {
   	  Bolbro.prefSetUnsignedLong("reportSecs", mSecondsBetweenReports);
   	  Bolbro.prefSetFloat("inclination", mInclination);
   	  Bolbro.prefSetFloat("azimuth", mAzimuth);
+  	  Bolbro.prefSetInt("command", mCommand);
   	}
 
   	void revertToDefaults() {
@@ -115,6 +124,19 @@ class CalibrationPacket : public Packet {
 			Serial.print(mAzimuth, 1);
 			Serial.println(" degree");
 
+			Serial.print("command: ");
+			switch (mCommand) {
+				case NoCommand:
+					Serial.println("NoCommand");
+					break;
+				case CalibrateSolarTracker:
+					Serial.println("CalibrateSolarTracker");
+					break;
+				case TestSolarTracker:
+					Serial.println("TestSolarTracker");
+					break;
+			}
+
 			Serial.print("checksum: ");
 			Serial.print(mCRC16);
 			Serial.println(mCRC16==crc16()?" correct":" wrong");
@@ -129,7 +151,8 @@ class CalibrationPacket : public Packet {
       json += linePrefix + "\t\"height\" : " + String(mMeasurementHeight, 2) +",\n";
       json += linePrefix + "\t\"inclination\" : " + String(mInclination, 1) +",\n";
       json += linePrefix + "\t\"azimuth\" : " + String(mAzimuth, 1) +",\n";
-      json += linePrefix + "\t\"reportSecs\" : " + String(mSecondsBetweenReports) +"\n";
+      json += linePrefix + "\t\"reportSecs\" : " + String(mSecondsBetweenReports) +",\n";
+      json += linePrefix + "\t\"command\" : " + String(mCommand) +"\n";
 
       json += linePrefix + "}";
 

@@ -480,17 +480,17 @@ boolean BolbroClass::connectToWiFi() {
 		long bestRSSI = -2000;
 
 		for (byte ap = 0; ap<numSsids; ap++) {
-			const char *ssid = WiFi.SSID(ap).c_str();
+			String ssid(WiFi.SSID(ap));
 			long rssi = WiFi.RSSI(ap);
-			Serial.printf("SSID: %s, RSSI: %ld", ssid, rssi);
+			Serial.printf("SSID: %s, RSSI: %ld", ssid.c_str(), rssi);
 
-			if (ssid!=0 && rssi>bestRSSI) {
+			if (rssi>bestRSSI) {
 				// test if this is a known network
 				struct Network *networkP = mNetworks;
 
 				while (networkP->ssid) {
 
-					if (strcmp(networkP->ssid, ssid)==0) {
+					if (ssid.equals(networkP->ssid)) {
 						//  known network, memorize
 						bestNetworkP = networkP;
 						bestRSSI = rssi;

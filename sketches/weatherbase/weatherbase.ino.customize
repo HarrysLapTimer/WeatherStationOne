@@ -32,6 +32,9 @@ static void sendCalibration() {
   }
   
   HC12.write(packetBinary, packetSize);
+
+  //  void command (if any)
+  calibrationPacket.mCommand = CalibrationPacket::Command::NoCommand;
 }
 
 //  aggregated / post processed values
@@ -46,12 +49,24 @@ DailyMinMax rainMinMax("rain"); // collect the in-day rain amount
 static void updateAggregates() {
   if (weatherPacket.mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
     temperatureMinMax.addSample(weatherPacket.mTemperatureDegreeCelsius);
+  
   if (weatherPacket.mWindSpeedMpS!=UNDEFINEDVALUE)
     windHistory.addSample(weatherPacket.mWindSpeedMpS);
-  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
-    rainHistory.addSample(weatherPacket.mAccumulatedRainMM);
-  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
-    rainMinMax.addSample(weatherPacket.mAccumulatedRainMM);
+  
+  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE) {
+    float lastAccumulatedRain = 0;
+    if (rainHistory.hasSamples())
+      lastAccumulatedRain = rainHistory.max();
+    rainHistory.addSample(lastAccumulatedRain+weatherPacket.mAccumulatedRainMM);
+  }
+
+  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE) {
+    float lastAccumulatedRain = 0;
+    if (rainMinMax.hasSamples())
+      lastAccumulatedRain = rainMinMax.max();
+    rainMinMax.addSample(lastAccumulatedRain+weatherPacket.mAccumulatedRainMM);
+  }
+  
   if (weatherPacket.mPressureHPA!=UNDEFINEDVALUE)
     barometricHistory.addSample(weatherPacket.mPressureHPA);
 }
@@ -87,6 +102,8 @@ class WeatherWebServer:public BolbroWebServer
       on("/calibrationdata.json", [this]() { handleCalibrationData(); });
       on("/change-calibration", [this]() { CHECKLOCALACCESS changeCalibration(); });
       on("/revert-calibration", [this]() { CHECKLOCALACCESS revertCalibration(); });
+      on("/calibrate-tracker", [this]() { CHECKLOCALACCESS calibrateTracker(); });
+      on("/test-tracker", [this]() { CHECKLOCALACCESS testTracker(); });
     
       BolbroWebServer::begin();    
     }
@@ -168,8 +185,8 @@ class WeatherWebServer:public BolbroWebServer
         json += "\t\t\"windbeaufort\" : " + String(round (pow (windMpS/0.836,2.0/3.0)), 0) + ",\n";
 
         float gustsMpS = windHistory.max();
-        json += "\t\t\"gustsmps\" : " + String(gustsMpS) + ",\n";
-        json += "\t\t\"gustsknots\" : " + String(gustsMpS*1.94384) + ",\n";
+        json += "\t\t\"gustsmps\" : " + String(gustsMpS, 1) + ",\n";
+        json += "\t\t\"gustsknots\" : " + String(gustsMpS*1.94384, 1) + ",\n";
         json += "\t\t\"gustsbeaufort\" : " + String(round (pow (gustsMpS/0.836,2.0/3.0)), 0) + ",\n";        
       } else {
         json += "\t\t\"windmps\" : \"-\",\n";
@@ -279,6 +296,16 @@ class WeatherWebServer:public BolbroWebServer
         send(200, "text/plain", "OK");
       }
     }
+
+    void calibrateTracker() {
+      calibrationPacket.mCommand = CalibrationPacket::Command::CalibrateSolarTracker;
+      send(200, "text/plain", "OK");
+    }
+
+    void testTracker() {
+      calibrationPacket.mCommand = CalibrationPacket::Command::TestSolarTracker;
+      send(200, "text/plain", "OK");
+    }
 };
 
 WeatherWebServer server;
@@ -350,6 +377,7 @@ void loop()
 
   //  Handle requests to server
   server.handleClient();
+  delay(1); // work around for slow web server response?
 
   //  Handle input from station
   if (HC12.available()) {
@@ -387,4 +415,5 @@ void loop()
   }
 
   Bolbro.loop();
+  delay(1); // work around for slow web server response?
 }

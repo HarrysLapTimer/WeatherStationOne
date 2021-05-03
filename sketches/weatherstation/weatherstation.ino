@@ -11,6 +11,43 @@
 //  project
 #include <CalibrationPacket.h>
 #include "WeatherReport.h"
+#if USE_TRACKER
+# include "Tracker.h"
+
+/****************************************************************************************************
+  solar tracker
+ ****************************************************************************************************/
+
+RTC_DATA_ATTR bool initializeTrackerMembers = true;
+RTC_DATA_ATTR Tracker tracker(initializeTrackerMembers);
+
+#endif
+
+/****************************************************************************************************
+  calibration stuff
+ ****************************************************************************************************/
+
+//  tricky: while RTC_DATA_ATTR variables should be initialized once and keep state for wake ups
+//  after deep sleep, the compiler is calling the constructor every time - including wake ups;
+//  to keep RTC state from former run, initializeCalibrationPacketMembers is passed in to allow disabling
+//  of member initialization; called with true during startup, it will be false for wake ups from deep
+//  sleep (see CalibrationPacket())
+RTC_DATA_ATTR bool initializeCalibrationPacketMembers = true;
+RTC_DATA_ATTR CalibrationPacket calibrationPacket(initializeCalibrationPacketMembers);
+
+/****************************************************************************************************
+  rain gauge
+ ****************************************************************************************************/
+
+RTC_DATA_ATTR unsigned int numRainBuckets = 0;
+RTC_DATA_ATTR unsigned int lastNumRainBucketsReported = 0;
+
+/****************************************************************************************************
+  deep sleep wakeup status
+ ****************************************************************************************************/
+
+RTC_DATA_ATTR int lastWakeupLevel = 0;
+RTC_DATA_ATTR int wakeupsSinceLastReport = 0;
 
 /****************************************************************************************************
   utility functions
@@ -34,20 +71,60 @@ static void deepSleep() {
   //  make sure we do not get interupts after deep sleep
   detachInterrupt(digitalPinToInterrupt(WINDSPEED_PIN));
 
+#if USE_TRACKER
+  //  detach stepper
+  tracker.deepSleep();
+#endif
+
   //  turn LED off
   digitalWrite(LED_PIN, LOW);
 
   //  send HC12 to power saving mode
   HC12.end();
 
+  //  set up all rain pin triggered wake up - make sure we register for any change
+  //  this works around a station lock down in case the rain gauge short cuts (always HIGH)
+  lastWakeupLevel = digitalRead(RAIN_PIN)?0:1;
+
+  if (DEBUG) {
+    Serial.print("enabling ext0 wake up for RAIN_PIN going to state ");
+    Serial.println(lastWakeupLevel);
+  }
+  esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, lastWakeupLevel); // wake up on every change
+
+  //  station reports data on timer wakeups only; set a wakeup time relative to
+  //  last reporting time...
+  unsigned long secondsToNextReport = calibrationPacket.mSecondsBetweenReports;
+
+  //  reduce wait time by ext0 wake ups to compensate report slow down
+#define SECONDS_PER_EXT0_WAKEUP 1
+#define MINIMAL_WAIT_SECONDS 2
+  if (secondsToNextReport>wakeupsSinceLastReport*SECONDS_PER_EXT0_WAKEUP+MINIMAL_WAIT_SECONDS)
+    secondsToNextReport = secondsToNextReport-wakeupsSinceLastReport*SECONDS_PER_EXT0_WAKEUP;
+  else
+    secondsToNextReport = MINIMAL_WAIT_SECONDS;
+  
+  if (DEBUG) {
+    Serial.print("enabling timer wake up in ");
+    Serial.print(secondsToNextReport);
+    Serial.println(" s");
+    if (wakeupsSinceLastReport>0) {
+      Serial.print("with time reduced by ");
+      Serial.print(wakeupsSinceLastReport*SECONDS_PER_EXT0_WAKEUP);
+      Serial.println(" seconds due to rain wake ups");
+    }
+  }
+  esp_sleep_enable_timer_wakeup (secondsToNextReport*uS2S_FACTOR);
+  
+  Serial.println("going to deep sleep...");
+
   if (serialStarted) {
     if (DEBUG) {
-      Serial.println("going to deep sleep...");
       Serial.flush();
       delay(1000); // make sure flush is completed before power down
     }
   }
-
+  
   //  sent ESP32 to deep sleep
   esp_deep_sleep_start();  
 }
@@ -79,18 +156,6 @@ static void printWakeupReason() {
       break;
   }
 }
-
-/****************************************************************************************************
-  calibration stuff
- ****************************************************************************************************/
-
-//  tricky: while RTC_DATA_ATTR variables should be initialized once and keep state for wake ups
-//  after deep sleep, the compiler is calling the constructor every time - including wake ups;
-//  to keep RTC state from former run, initializeCalibrationPacketMembers is passed in to allow disabling
-//  of member initialization; called with true during startup, it will be false for wake ups from deep
-//  sleep (see CalibrationPacket())
-RTC_DATA_ATTR bool initializeCalibrationPacketMembers = true;
-RTC_DATA_ATTR CalibrationPacket calibrationPacket(initializeCalibrationPacketMembers);
 
 /****************************************************************************************************
   sensor handling functions
@@ -200,16 +265,16 @@ static void propagateWindDirection(WeatherReport &report) {
   }
 }
 
-//  rain gauge
-RTC_DATA_ATTR unsigned int numRainBuckets = 0;
-RTC_DATA_ATTR unsigned int lastNumRainBucketsReported = 0;
-
 const double gaugeDiameter = 106; // mm
 const double gaugeArea = M_PI*(gaugeDiameter/2)*(gaugeDiameter/2); // mm2
 
 static void handleRainState() {
-  //  called after ext0 wakeup, increment  
+  //  called after ext0 wakeup, increment
   numRainBuckets++;
+  if (DEBUG) {
+    Serial.print("increased number of rain buckets to ");
+    Serial.println(numRainBuckets);
+  }
 }
 
 static void propagateRain(WeatherReport &report) {
@@ -219,8 +284,16 @@ static void propagateRain(WeatherReport &report) {
   if (numRainBuckets>lastNumRainBucketsReported)
     // in case a value has been reset...
     numBuckets = numRainBuckets-lastNumRainBucketsReported;
-    
+
   double rainMM = numBuckets*calibrationPacket.mBucketTriggerVolume/gaugeArea;
+
+  if (DEBUG&&numBuckets>0) {
+    Serial.print("adding ");
+    Serial.print(numBuckets);
+    Serial.print(" buckets equaling ");
+    Serial.print(rainMM, 2);
+    Serial.println("mm rain");
+  }
 
   //  rainMM is the rain in mm we got since last time propagateRain has been called
   report.addRain(rainMM);
@@ -394,24 +467,22 @@ void setup() {
 
   //  configure rain PIN
   pinMode(RAIN_PIN, INPUT);
-  bool currentRain = digitalRead(RAIN_PIN);
-
-  //  set up all triggers to wake up
-  esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, currentRain?0:1); // wake up on every change
-  esp_sleep_enable_timer_wakeup (calibrationPacket.mSecondsBetweenReports*uS2S_FACTOR);
+  delay(10); // make sure digitalRead() is ready
 
   //  handle wakup cause
   switch(esp_sleep_get_wakeup_cause()) {
     case ESP_SLEEP_WAKEUP_EXT0:
       //  wakeup has been set either for state 1 or 0
       //  increase count only in case we are in 1
-      if (currentRain) 
+      if (lastWakeupLevel) 
         handleRainState();
+      wakeupsSinceLastReport++;
       //  goto deep sleep instantly
       deepSleep();
       break;
     case ESP_SLEEP_WAKEUP_TIMER:
       //  proceed to loop() for data collection and reporting
+      wakeupsSinceLastReport = 0;
       break;
     default:
       //  all other wake ups, goto deep sleep again
@@ -438,6 +509,12 @@ void setup() {
 
   //  set starting millis for sampling-loop
   startSampling = millis();
+
+#if USE_TRACKER
+  //  maintain tracker status
+  if (tracker.canBeControlled())
+    tracker.moveTo(calibrationPacket.mAzimuth);
+#endif
 }
 
 void loop() {
@@ -462,6 +539,25 @@ void loop() {
         if (newCalibrationPacket.decodeByte(HC12.read())) {
             calibrationPacket = newCalibrationPacket; // sound packet
             calibrationPacket.printSerial();
+            
+            //  Check if we have received a command...
+            if (calibrationPacket.mCommand != CalibrationPacket::Command::NoCommand) {
+              switch (calibrationPacket.mCommand) {
+#if USE_TRACKER
+                case CalibrationPacket::Command::CalibrateSolarTracker:
+                  tracker.calibrate();
+                  while (!tracker.canBeControlled())
+                    tracker.run();
+                  break;
+                case CalibrationPacket::Command::TestSolarTracker:
+                  tracker.minMaxTesting();
+                  while (!tracker.canBeControlled())
+                    tracker.run();
+                  break;          
+#endif        
+              }
+            }
+            
             digitalWrite(LED_PIN, LOW); // ready
             break;
         }
@@ -471,6 +567,11 @@ void loop() {
     //  ...and goto sleep afterwards 
     deepSleep();
   }
+
+#if USE_TRACKER
+  //  run tracker if position has changed
+  tracker.run();
+#endif
 
   //  sensors collecting data for a longer time
   propagateBatteryVoltage(report);
