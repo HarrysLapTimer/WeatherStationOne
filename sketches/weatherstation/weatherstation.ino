@@ -535,7 +535,7 @@ void loop() {
     CalibrationPacket newCalibrationPacket;
     while (millis()-waitStartedMillis<2000) {
       if (HC12.available()) {
-        digitalWrite(LED_PIN, HIGH); // high when data is received
+        digitalWrite(LED_PIN, HIGH); // high when sound data is received
         if (newCalibrationPacket.decodeByte(HC12.read())) {
             calibrationPacket = newCalibrationPacket; // sound packet
             calibrationPacket.printSerial();

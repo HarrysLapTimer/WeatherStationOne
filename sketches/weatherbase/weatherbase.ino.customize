@@ -14,10 +14,12 @@
 #include "DailyMinMax.h"
 #include "Sun.h"
 
-//  weather data
-
+//  CRCed weather data
 WeatherPacket weatherPacket;
 time_t lastPacketUpdate = 0;
+
+//  temporary weather data for reading
+WeatherPacket newWeatherPacket;
 
 //  configuration data
 CalibrationPacket calibrationPacket;
@@ -382,8 +384,9 @@ void loop()
   //  Handle input from station
   if (HC12.available()) {
     lastMillisLEDTurnedOn = currentMillis;
-    digitalWrite(LED_PIN, HIGH); // high when data is received
-    if (weatherPacket.decodeByte(HC12.read())) {
+    digitalWrite(LED_PIN, HIGH); // high when sound data is received
+    if (newWeatherPacket.decodeByte(HC12.read())) {
+      weatherPacket = newWeatherPacket;
       weatherPacket.printSerial();
       lastPacketUpdate = time(NULL);
 

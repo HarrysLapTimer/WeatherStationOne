@@ -123,10 +123,40 @@ class WeatherPacket : public Packet {
 			Serial.println(mCRC16==crc16()?" correct":" wrong");
     }
 
+#define STRING_WORKAROUND 1
+
+#if STRING_WORKAROUND
+		const char *jsonLine(const char *name, bool valid, float value, int precision, bool closingComma = true) {
+			static char buffer[128];
+
+			if (valid)
+				snprintf(buffer, 128, "\t\"%s\" : %.*f%s\n", name, precision, value, closingComma?",":"");
+			else
+				snprintf(buffer, 128, "\t\"%s\" : \"%s\"%s\n", name, STRINGNOTINITIALIZED, closingComma?",":"");
+
+			return buffer;
+		}
+#endif
+
     String json(String linePrefix = "") {
 
       String json = linePrefix + "{\n";
 
+#if STRING_WORKAROUND
+			json += linePrefix + jsonLine("rainoverall", mAccumulatedRainMM!=UNDEFINEDVALUE, mAccumulatedRainMM, 1);
+			json += linePrefix + jsonLine("temperature", mTemperatureDegreeCelsius!=UNDEFINEDVALUE, mTemperatureDegreeCelsius, 1);
+			json += linePrefix + jsonLine("humidity", mHumidityPercent!=UNDEFINEDVALUE, mHumidityPercent, 1);
+			json += linePrefix + jsonLine("pressure", mPressureHPA!=UNDEFINEDVALUE, mPressureHPA, 1);
+
+      if (mWindDirection[0])
+        json += linePrefix + "\t\"winddirection\" : \"" + String(mWindDirection) +"\",\n";
+      else
+        json += linePrefix + "\t\"winddirection\" : \"" STRINGNOTINITIALIZED "\",\n";
+
+			json += linePrefix + jsonLine("windspeed", mWindSpeedMpS!=UNDEFINEDVALUE, mWindSpeedMpS, 1);
+			json += linePrefix + jsonLine("batteryvoltage", mBatteryVoltage!=UNDEFINEDVALUE, mBatteryVoltage, 2);
+			json += linePrefix + jsonLine("batterypercentage", mBatteryVoltage!=UNDEFINEDVALUE, batteryPercentage(), 0, false);
+#else
       if (mAccumulatedRainMM!=UNDEFINEDVALUE)
         json += linePrefix + "\t\"rainoverall\" : " + String(mAccumulatedRainMM, 1) +",\n";
       else
@@ -164,6 +194,7 @@ class WeatherPacket : public Packet {
         json += linePrefix + "\t\"batteryvoltage\" : \"" STRINGNOTINITIALIZED "\",\n";
         json += linePrefix + "\t\"batterypercentage\" : \"" STRINGNOTINITIALIZED "\"\n";
       }
+#endif
 
       json += linePrefix + "}";
 
