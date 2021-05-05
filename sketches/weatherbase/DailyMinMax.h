@@ -42,14 +42,22 @@ class DailyMinMax
       }
       
       if (mHasSamples) {
+        mLast = value;
         if (value<mMin)
           mMin = value;
         if (value>mMax)
           mMax = value;
       } else {
-        mMin = mMax = value;
+        mMin = mMax = mLast = value;
         mHasSamples = true;
       }
+    }
+
+    void addDeltaSample(float deltaValue) {
+      if (hasSamples())
+        addSample(mLast+deltaValue);
+      else
+        addSample(deltaValue);
     }
 
     //  call with hasSamples() true only
@@ -70,7 +78,7 @@ class DailyMinMax
   private:
 
     const char *mName;
-    float mMin, mMax;
+    float mMin, mMax, mLast;
     bool mHasSamples;
     time_t mStartOfDaySeconds;
 };

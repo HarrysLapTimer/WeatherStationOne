@@ -18,7 +18,7 @@ class WeatherPacket : public Packet {
   public:
 
     //  rain gauge
-    double mAccumulatedRainMM; // mm
+    double mDeltaRainMM; // mm
 
     //  temperature et al
     float mTemperatureDegreeCelsius; // degree Celsius
@@ -42,7 +42,7 @@ class WeatherPacket : public Packet {
   public:
 
     WeatherPacket() : Packet() {
-      mAccumulatedRainMM = UNDEFINEDVALUE;
+      mDeltaRainMM = UNDEFINEDVALUE;
 
       mTemperatureDegreeCelsius = UNDEFINEDVALUE;
       mPressureHPA = UNDEFINEDVALUE;
@@ -79,10 +79,10 @@ class WeatherPacket : public Packet {
 			Serial.print(mMagicByte);
 			Serial.println(mMagicByte==MAGICBYTE?" correct":" wrong");
 
-			if (mAccumulatedRainMM!=UNDEFINEDVALUE) {
+			if (mDeltaRainMM!=UNDEFINEDVALUE) {
       	Serial.print("rain: ");
-        Serial.print(mAccumulatedRainMM, 1);
-      	Serial.println(" mm overall");
+        Serial.print(mDeltaRainMM, 1);
+      	Serial.println(" mm delta");
       }
 
 			if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE) {
@@ -143,7 +143,7 @@ class WeatherPacket : public Packet {
       String json = linePrefix + "{\n";
 
 #if STRING_WORKAROUND
-			json += linePrefix + jsonLine("rainoverall", mAccumulatedRainMM!=UNDEFINEDVALUE, mAccumulatedRainMM, 1);
+			json += linePrefix + jsonLine("raindelta", mDeltaRainMM!=UNDEFINEDVALUE, mDeltaRainMM, 1);
 			json += linePrefix + jsonLine("temperature", mTemperatureDegreeCelsius!=UNDEFINEDVALUE, mTemperatureDegreeCelsius, 1);
 			json += linePrefix + jsonLine("humidity", mHumidityPercent!=UNDEFINEDVALUE, mHumidityPercent, 1);
 			json += linePrefix + jsonLine("pressure", mPressureHPA!=UNDEFINEDVALUE, mPressureHPA, 1);
@@ -157,10 +157,10 @@ class WeatherPacket : public Packet {
 			json += linePrefix + jsonLine("batteryvoltage", mBatteryVoltage!=UNDEFINEDVALUE, mBatteryVoltage, 2);
 			json += linePrefix + jsonLine("batterypercentage", mBatteryVoltage!=UNDEFINEDVALUE, batteryPercentage(), 0, false);
 #else
-      if (mAccumulatedRainMM!=UNDEFINEDVALUE)
-        json += linePrefix + "\t\"rainoverall\" : " + String(mAccumulatedRainMM, 1) +",\n";
+      if (mDeltaRainMM!=UNDEFINEDVALUE)
+        json += linePrefix + "\t\"raindelta\" : " + String(mDeltaRainMM, 1) +",\n";
       else
-        json += linePrefix + "\t\"rainoverall\" : \"" STRINGNOTINITIALIZED "\",\n";
+        json += linePrefix + "\t\"raindelta\" : \"" STRINGNOTINITIALIZED "\",\n";
 
       if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
         json += linePrefix + "\t\"temperature\" : " + String(mTemperatureDegreeCelsius, 1) +",\n";

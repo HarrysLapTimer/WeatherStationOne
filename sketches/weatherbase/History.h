@@ -93,6 +93,13 @@ class History
         printSerial();
     }
 
+    void addDeltaSample(float deltaValue) {
+      if (hasSamples())
+        addSample(mSamples[mCount-1].value+deltaValue);
+      else
+        addSample(deltaValue);
+    }
+
     //  call with hasSamples() true only
     float avg() {
       if (mAggregatedVoid)

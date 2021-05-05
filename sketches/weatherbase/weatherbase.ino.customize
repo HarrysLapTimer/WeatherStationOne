@@ -55,19 +55,11 @@ static void updateAggregates() {
   if (weatherPacket.mWindSpeedMpS!=UNDEFINEDVALUE)
     windHistory.addSample(weatherPacket.mWindSpeedMpS);
   
-  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE) {
-    float lastAccumulatedRain = 0;
-    if (rainHistory.hasSamples())
-      lastAccumulatedRain = rainHistory.max();
-    rainHistory.addSample(lastAccumulatedRain+weatherPacket.mAccumulatedRainMM);
-  }
+  if (weatherPacket.mDeltaRainMM!=UNDEFINEDVALUE)
+    rainHistory.addDeltaSample(weatherPacket.mDeltaRainMM);
 
-  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE) {
-    float lastAccumulatedRain = 0;
-    if (rainMinMax.hasSamples())
-      lastAccumulatedRain = rainMinMax.max();
-    rainMinMax.addSample(lastAccumulatedRain+weatherPacket.mAccumulatedRainMM);
-  }
+  if (weatherPacket.mDeltaRainMM!=UNDEFINEDVALUE) 
+    rainMinMax.addDeltaSample(weatherPacket.mDeltaRainMM);
   
   if (weatherPacket.mPressureHPA!=UNDEFINEDVALUE)
     barometricHistory.addSample(weatherPacket.mPressureHPA);
@@ -205,12 +197,12 @@ class WeatherWebServer:public BolbroWebServer
         json += "\t\t\"barotrend\" : \"-\",\n";
 
       if (rainMinMax.hasSamples())
-        json += "\t\t\"rainday\" : " + String(rainMinMax.range()) + ",\n";        
+        json += "\t\t\"rainday\" : " + String(rainMinMax.range(), 1) + ",\n";        
       else
         json += "\t\t\"rainday\" : \"-\",\n";
 
       if (rainHistory.hasSamples())
-        json += "\t\t\"rainhour\" : " + String(rainHistory.range()) + "\n";        
+        json += "\t\t\"rainhour\" : " + String(rainHistory.range(), 1) + "\n";        
       else
         json += "\t\t\"rainhour\" : \"-\"\n";
       
@@ -317,8 +309,8 @@ static void propagateToOpenHAB() {
   //  propagate verified data to openHAB
   if (weatherPacket.mTemperatureDegreeCelsius!=UNDEFINEDVALUE)
     Bolbro.updateItem("ESP32_Weatherbase_Temperature", String(weatherPacket.mTemperatureDegreeCelsius, 1)+"°C");
-  if (weatherPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
-    Bolbro.updateItem("ESP32_Weatherbase_SumRain", String(weatherPacket.mAccumulatedRainMM, 1)+"mm");
+  if (weatherPacket.mDeltaRainMM!=UNDEFINEDVALUE)
+    Bolbro.updateItem("ESP32_Weatherbase_DeltaRain", String(weatherPacket.mDeltaRainMM, 2)+"mm");
   if (weatherPacket.mPressureHPA!=UNDEFINEDVALUE)
     Bolbro.updateItem("ESP32_Weatherbase_Pressure", String(weatherPacket.mPressureHPA, 0)+"hPa");
   if (weatherPacket.mHumidityPercent!=UNDEFINEDVALUE)
@@ -374,6 +366,7 @@ void loop()
 {
   static unsigned long lastMillisLEDTurnedOn = 0;
   static unsigned long lastMillisSunCalculated = 0;
+  static unsigned long lastMillisPacketUpdated = 0;
 
   unsigned long currentMillis = millis();
 
@@ -389,6 +382,7 @@ void loop()
       weatherPacket = newWeatherPacket;
       weatherPacket.printSerial();
       lastPacketUpdate = time(NULL);
+      lastMillisPacketUpdated = currentMillis;
 
       //  station is up currently, "return" calibration / configuration parameters
       sendCalibration();
@@ -401,14 +395,16 @@ void loop()
     }
   }
 
-  //  Maintain LED status, turn off after 2 seconds of inactivity
-  //  and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
+  //  Maintain LED status, turn off after 2 seconds of inactivity ...
   unsigned long secondsPassed = (currentMillis-lastMillisLEDTurnedOn)/MS2S_FACTOR;
+  if (secondsPassed>2)
+    digitalWrite(LED_PIN, LOW); // low once no activity detected
+
+  //  ... and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
+  secondsPassed = (currentMillis-lastMillisPacketUpdated)/MS2S_FACTOR;
   if (secondsPassed>3*calibrationPacket.mSecondsBetweenReports)
     //  blink mode
     digitalWrite(LED_PIN, secondsPassed%2?HIGH:LOW);
-  else if (secondsPassed>2)
-    digitalWrite(LED_PIN, LOW); // low once no activity detected
 
   //  Maintain sun position
   secondsPassed = (currentMillis-lastMillisSunCalculated)/MS2S_FACTOR;

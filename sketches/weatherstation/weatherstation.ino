@@ -279,25 +279,26 @@ static void handleRainState() {
 
 static void propagateRain(WeatherReport &report) {
   //  to calculate mm from buckets
-  unsigned int numBuckets = 0;
+  unsigned int numDeltaBuckets = 0;
   
   if (numRainBuckets>lastNumRainBucketsReported)
     // in case a value has been reset...
-    numBuckets = numRainBuckets-lastNumRainBucketsReported;
+    numDeltaBuckets = numRainBuckets-lastNumRainBucketsReported;
 
-  double rainMM = numBuckets*calibrationPacket.mBucketTriggerVolume/gaugeArea;
+  double deltaRainMM = numDeltaBuckets*calibrationPacket.mBucketTriggerVolume/gaugeArea;
 
-  if (DEBUG&&numBuckets>0) {
+  if (DEBUG&&numDeltaBuckets>0) {
     Serial.print("adding ");
-    Serial.print(numBuckets);
+    Serial.print(numDeltaBuckets);
     Serial.print(" buckets equaling ");
-    Serial.print(rainMM, 2);
+    Serial.print(deltaRainMM, 2);
     Serial.println("mm rain");
   }
 
   //  rainMM is the rain in mm we got since last time propagateRain has been called
-  report.addRain(rainMM);
+  report.setDeltaRain(deltaRainMM);
 
+  //  memorize current rain buckets to allow a delta calculation for the next call
   lastNumRainBucketsReported = numRainBuckets;
 }
 

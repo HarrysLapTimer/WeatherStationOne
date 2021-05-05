@@ -16,15 +16,9 @@ class WeatherReport {
 
     WeatherReport() {}
 
-    //  sensor collects an amount of rain in mm; can be called multiple times during sampling
-    //  every addition is aggregated in mAccumulatedRainMM; in addition, the hourly amount
-    //  of rain (mm/h) is calculated using a low pass filter
-    void addRain(double rainMM) {
-      //  aggregate amount
-      if (mPacket.mAccumulatedRainMM!=UNDEFINEDVALUE)
-        mPacket.mAccumulatedRainMM += rainMM;
-      else
-        mPacket.mAccumulatedRainMM = rainMM;
+    //  sensor collects an amount of rain in mm
+    void setDeltaRain(double rainMM) {
+      mPacket.mDeltaRainMM = rainMM;
     }
 
     bool hasTemperature() {

@@ -136,7 +136,7 @@ class Tracker
             Serial.println(" degree) afterwards");
           }
           calibrate();
-          mPosition = newPosition; // restire this value at end of calibration
+          mPosition = newPosition; // restore this value at end of calibration
         } else {
           if (DEBUG&&newPosition!=mStepper->targetPosition()) {
             Serial.print("moving to position ");
@@ -146,6 +146,7 @@ class Tracker
             Serial.println(" degree)");
           }          
           //  AccelStepper::moveTo() is a no-op in case the position is unchanged
+          mStepper->enableOutputs();
           mStepper->moveTo(newPosition);
         }
       } else
