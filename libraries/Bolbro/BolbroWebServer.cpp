@@ -1,15 +1,9 @@
-#ifdef ESP_PLATFORM // ESP32
-#	define HASSPIFFS 1
-#else
-#	define HASSPIFFS 0
-#endif
+#include <BolbroWebServer.h>
+#include <Bolbro.h>
 
 #if HASSPIFFS
 #	include <SPIFFS.h> // for access to image data
 #endif
-
-#include <BolbroWebServer.h>
-#include <Bolbro.h>
 
 /* --------------------------------------------------------------------------------
 	WebServer base class to be customized

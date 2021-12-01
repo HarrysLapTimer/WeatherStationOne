@@ -17,6 +17,7 @@
 #ifdef ESP_PLATFORM
 #	define HASPREFERENCES 1
 #	define HASREMOTEDEBUG 1
+#	include <WiFi.h>
 #else
 #	define HASPREFERENCES 0
 #	define HASREMOTEDEBUG 0
@@ -140,6 +141,7 @@ class BolbroClass
 
 		void updateIsBedtime();
 		void publishDNSName();
+		void onWiFiEvent(WiFiEvent_t event);
 
 		const char *mSignalStrengthItem;
 		int mLastSignalStrength;

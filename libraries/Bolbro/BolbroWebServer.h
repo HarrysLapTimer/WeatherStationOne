@@ -10,8 +10,10 @@
 #include <Arduino.h>
 
 #ifdef ESP_PLATFORM // ESP32
+#	define HASSPIFFS 1
 #	include <WebServer.h>
 #else
+#	define HASSPIFFS 0
 #	include <ESP8266WebServer.h>
 #	define WebServer ESP8266WebServer
 #endif

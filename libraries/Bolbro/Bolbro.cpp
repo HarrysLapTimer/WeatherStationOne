@@ -529,6 +529,35 @@ static boolean connectNetwork(const char *ssid, const char *password) {
 	return WiFi.status() == WL_CONNECTED;
 }
 
+void BolbroClass::onWiFiEvent(WiFiEvent_t event) {
+	/*
+    switch(event) {
+        case ARDUINO_EVENT_WIFI_STA_START:
+            //set sta hostname here
+            WiFi.setHostname(AP_SSID);
+            break;
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+            //enable sta ipv6 here
+            WiFi.enableIpV6();
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+            Serial.print("STA IPv6: ");
+            Serial.println(WiFi.localIPv6());
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            wifiOnConnect();
+            wifi_connected = true;
+            break;
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            wifi_connected = false;
+            wifiOnDisconnect();
+            break;
+        default:
+            break;
+    }
+    */
+}
+
 boolean BolbroClass::connectToWiFi() {
 
 	boolean connected = true;
@@ -537,6 +566,14 @@ boolean BolbroClass::connectToWiFi() {
 
 		Serial.printf("WiFi configuration...\n");
 		WiFi.mode(WIFI_STA);
+
+		//typedef std::function<void(void)> THandlerFunction;
+		//void on(const Uri &uri, THandlerFunction handler);
+		//on("/restart", [this]() { ... }); works
+
+		//typedef std::function<void(system_event_id_t event, system_event_info_t info)> WiFiEventFuncCb;
+    	//wifi_event_id_t onEvent(WiFiEventFuncCb cbEvent, system_event_id_t event = SYSTEM_EVENT_MAX);
+	    WiFi.onEvent((WiFiEventFuncCb)([this](system_event_id_t event, system_event_info_t info) { }), SYSTEM_EVENT_MAX);
 
 		connected = false;
 
@@ -612,6 +649,11 @@ boolean BolbroClass::connectToWiFi() {
 		if (connected) {
 			Serial.printf("WiFi %s connected\n", WiFi.SSID().c_str());
 			Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
+
+			if (WiFi.enableIpV6()) {
+				delay(1000);
+				Serial.printf("IP6 address: %s\n", WiFi.localIPv6().toString().c_str());
+			}
 
 			publishDNSName();
 
