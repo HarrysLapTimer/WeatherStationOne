@@ -1,8 +1,15 @@
+#ifdef ESP_PLATFORM // ESP32
+#	define HASSPIFFS 1
+#else
+#	define HASSPIFFS 0
+#endif
+
+#if HASSPIFFS
+#	include <SPIFFS.h> // for access to image data
+#endif
+
 #include <BolbroWebServer.h>
 #include <Bolbro.h>
-
-#include <SPIFFS.h> // for access to image data
-
 
 /* --------------------------------------------------------------------------------
 	WebServer base class to be customized
@@ -13,18 +20,23 @@ BolbroWebServer::BolbroWebServer() : WebServer(80) {
 
 void BolbroWebServer::begin() {
 
+  on("/restart", [this]() { CHECKLOCALACCESS handleRestart(); });
+  on("/reconnect", [this]() { CHECKLOCALACCESS handleReconnect(); });
   on("/time", [this]() { CHECKLOCALACCESS handleTime(); });
   onNotFound([this]() { CHECKLOCALACCESS handleNotFound(); });
 
   WebServer::begin();
 
-    //  Allow access to files
+#if HASSPIFFS
+  //  Allow access to files
   if (SPIFFS.begin())
     LOG->println("SPIFFS mount succeeded");
+#endif
 }
 
-//  read a file from SPIFFS and optionally replace substrings
+#if HASSPIFFS
 
+//  read a file from SPIFFS and optionally replace substrings
 void BolbroWebServer::returnFile(const char *path, const char *mimeType,
   int numReplacements, const char **subStrings, const char **replacements)
 {
@@ -101,6 +113,8 @@ bool BolbroWebServer::loadFromSpiffs(String path)
   return result;
 }
 
+#endif
+
 String BolbroWebServer::messageToString(String linePrefix) {
 
   String message = linePrefix + "URI: ";
@@ -166,6 +180,22 @@ void BolbroWebServer::handleTime() {
     send(200, "text/plain", "OK");
   else
     send(404, "text/plain", "invalid arguments");
+}
+
+void BolbroWebServer::handleRestart() {
+    send(200, "text/plain", "OK");
+    sleep(500); // make sure the reply is sent
+
+	ESP.restart();
+}
+
+void BolbroWebServer::handleReconnect() {
+    send(200, "text/plain", "OK");
+    sleep(500); // make sure the reply is sent
+
+    Bolbro.disconnectWiFi();
+    sleep(1000);
+    Bolbro.connectToWiFi(); // trigger direct re-connect
 }
 
 

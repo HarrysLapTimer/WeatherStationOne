@@ -47,7 +47,8 @@
 
 //  rain gauge
 #define RAIN_PIN 27
-#define DEFAULT_BUCKET_TRIGGER_VOLUME 2250.0f // 2.25ml = 2250m3;
+// 	8 pulses = 25ml, one bucket = 3.125ml
+#define DEFAULT_BUCKET_TRIGGER_VOLUME 3125.0f // 3.125ml = 3125m3;
 
 //  temperature et al
 #define SDA_PIN 21 // documentation only

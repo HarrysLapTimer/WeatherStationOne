@@ -372,7 +372,7 @@ void loop()
 
   //  Handle requests to server
   server.handleClient();
-  delay(1); // work around for slow web server response?
+  delay(10); // work around for slow web server response?
 
   //  Handle input from station
   if (HC12.available()) {
@@ -414,5 +414,5 @@ void loop()
   }
 
   Bolbro.loop();
-  delay(1); // work around for slow web server response?
+  delay(10); // work around for slow web server response?
 }

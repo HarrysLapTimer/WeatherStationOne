@@ -98,7 +98,7 @@
 				gedruckt werden. Die Modelle stellen wird im Netz zum Download zur Verf&uuml;gung.</p>
 
 				<p>Zuletzt gibt es eine Menge Elektronik und Software. Auch die ist komplett selbst entworfen um unsere
-				Anforderungen zu erf&uuml;llen. Wichtig war uns insbesondere, dass die Daten online ins Bolbrohaus gemeldet
+				Anforderungen zu erf&uuml;llen. Wichtig war uns insbesondere, dass die Daten online ins Bolbro-Haus gemeldet
 				und in die <b>Hausautomation</b> und <b>Energiemanagement</b> integriert werden. Dazu befindet sich in der Wetterh&uuml;tte ein Microcontroller,
 				der regelm&auml;ssig alle Messungen durchf&uuml;hrt. Die Daten werden dann &uuml;ber eine "Long Range" Funktechnik
 				ins Haus gemeldet. Hier befindet sich ein weiterer Microcontroller, der die Daten auf dieser Webseite
@@ -166,10 +166,10 @@
 						if (jsonObj.aggregated.rainhour=="-")
 							rain = "-";
 						else {
-							rain = jsonObj.aggregated.rainhour + " mm/h";
+							rain = jsonObj.aggregated.rainhour + " <sup>mm</sup>&frasl;<sub>h</sub>";
 
 							if (jsonObj.aggregated.rainday!="-")
-								rain = rain + ", " + jsonObj.aggregated.rainday + " mm/d";
+								rain = rain + ", " + jsonObj.aggregated.rainday + " <sup>mm</sup>&frasl;<sub>Tag</sub>";
 						}
 						document.getElementById("rain").innerHTML = rain;
 
@@ -193,23 +193,26 @@
 									break;
 							}
 
-							wind = wind + " <button style='background-color: #60c9f8; font-size: 27pt; padding: 0px;' type='button' onclick='changeWindSpeedUnit()'>" + windSpeedUnit + "</button>";
+							var htmlWindSpeedUnit = windSpeedUnit
 
-								switch(windSpeedUnit) {
-									case "m/s":
-										if (jsonObj.aggregated.gustsmps!="-"&&jsonObj.aggregated.gustsmps!=jsonObj.aggregated.windmps)
-											wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsmps + ")";
-										break;
-									case "kn":
-										if (jsonObj.aggregated.gustsknots!="-"&&jsonObj.aggregated.gustsknots!=jsonObj.aggregated.windknots)
-											wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsknots + ")";
-										break;
-									case "Bf":
-										if (jsonObj.aggregated.gustsbeaufort!="-"&&jsonObj.aggregated.gustsbeaufort!=jsonObj.aggregated.windbeaufort)
-											wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsbeaufort + ")";
-										break;
-								}
+							if (htmlWindSpeedUnit=="m/s")
+								htmlWindSpeedUnit = "<sup>m</sup>&frasl;<sub>s</sub>"
+							wind = wind + " <button style='background-color: #60c9f8; font-size: 27pt; padding: 0px;' type='button' onclick='changeWindSpeedUnit()'>" + htmlWindSpeedUnit + "</button>";
 
+							switch(windSpeedUnit) {
+								case "m/s":
+									if (jsonObj.aggregated.gustsmps!="-"&&jsonObj.aggregated.gustsmps!=jsonObj.aggregated.windmps)
+										wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsmps + ")";
+									break;
+								case "kn":
+									if (jsonObj.aggregated.gustsknots!="-"&&jsonObj.aggregated.gustsknots!=jsonObj.aggregated.windknots)
+										wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsknots + ")";
+									break;
+								case "Bf":
+									if (jsonObj.aggregated.gustsbeaufort!="-"&&jsonObj.aggregated.gustsbeaufort!=jsonObj.aggregated.windbeaufort)
+										wind = wind + " (B&ouml;en " + jsonObj.aggregated.gustsbeaufort + ")";
+									break;
+							}
 
 							if (jsonObj.weather.winddirection!="-")
 								wind = wind + " " + windDirections.get(jsonObj.weather.winddirection);

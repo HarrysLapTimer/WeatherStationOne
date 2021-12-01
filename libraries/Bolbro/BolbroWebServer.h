@@ -8,7 +8,13 @@
 #define BolbroWebServer_h
 
 #include <Arduino.h>
-#include <WebServer.h>
+
+#ifdef ESP_PLATFORM // ESP32
+#	include <WebServer.h>
+#else
+#	include <ESP8266WebServer.h>
+#	define WebServer ESP8266WebServer
+#endif
 
 class BolbroWebServer : public WebServer
 {
@@ -20,10 +26,12 @@ class BolbroWebServer : public WebServer
 
   protected:
 
+#if HASSPIFFS
     //  support to return files stored in SPIFFS
     void returnFile(const char *path, const char *mimeType,
       int numReplacements = 0, const char **subStrings = NULL, const char **replacements = NULL);
     bool loadFromSpiffs(String path);
+#endif
 
     //  debug support
     String messageToString(String linePrefix = "");
@@ -34,6 +42,12 @@ class BolbroWebServer : public WebServer
 
     // set Germany during summer: http://weatherbase.local/time?GMTOffset=3600&DaylightOffset=3600
 	void handleTime();
+
+	//	restart ESP
+	void handleRestart();
+
+	//	reconnect WiFi
+	void handleReconnect();
 };
 
 #endif

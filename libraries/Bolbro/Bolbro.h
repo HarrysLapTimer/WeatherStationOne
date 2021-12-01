@@ -2,13 +2,30 @@
 	Bolbro library
 	Common utilities for Home Automation gadgets based on ESP32
 	Harald Schlangmann, June 2020
+
+	prepared for
+		ESP32 Dev Model
+		LOLIN (WEMOS) D1 R2 & mini
+
    -------------------------------------------------------------------------------- */
 
 #ifndef Bolbro_h
 #define Bolbro_h
 
 #include <Arduino.h>
-#include <Preferences.h>
+
+#ifdef ESP_PLATFORM
+#	define HASPREFERENCES 1
+#	define HASREMOTEDEBUG 1
+#else
+#	define HASPREFERENCES 0
+#	define HASREMOTEDEBUG 0
+#	include <ESP8266WiFi.h>
+#endif
+
+#if HASPREFERENCES
+#	include <Preferences.h>
+#endif
 
 #define STRINGNOTINITIALIZED  "-"
 
@@ -67,9 +84,10 @@ class BolbroClass
 		void disconnectWiFi();
 
 		//	Check if requester ip address given is considered a local access; this applies if either the
-		//	IP is a well known local address range, or one of the WAN gateways used at Bolbrohaus
+		//	IP is a well known local address range, or one of the WAN gateways used at Bolbro-Haus
 		bool localAccess(const IPAddress &ipAddr);
 
+#if HASPREFERENCES
 		//	Preference handling
 		void prefSetInt(const char *key, int value);
 		int prefGetInt(const char *key, int defaultValue = 0);
@@ -82,8 +100,14 @@ class BolbroClass
 
 		void prefSetFloat(const char *key, float value);
 		float prefGetFloat(const char *key, float defaultValue = 0.0f);
+#endif
 
 	private:
+
+#if !HASPREFERENCES
+		int mGMTOffsetSec;
+		int mDaylightOffsetSec;
+#endif
 
 #define MAX_NETWORKS 10
 		struct Network {
@@ -124,7 +148,9 @@ class BolbroClass
 		int mLastStartItemRetryCount;
 		void updateOHItems();
 
+#if HASPREFERENCES
 		Preferences preferences;
+#endif
 };
 
 extern BolbroClass Bolbro;

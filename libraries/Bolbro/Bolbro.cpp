@@ -1,13 +1,23 @@
 #include <Bolbro.h>
 
+#ifdef ESP_PLATFORM // ESP32
+#	define NEWHTTPCLIENT 1
+#	include <HTTPClient.h> // for communication to openHAB
+#else
+#	define NEWHTTPCLIENT 0
+#	include <ESP8266HTTPClient.h>
+#endif
+
 /* --------------------------------------------------------------------------------
 	Global definitions
    -------------------------------------------------------------------------------- */
 
-#include <RemoteDebug.h>
-
 Print *LOG = &Serial;
+
+#if HASREMOTEDEBUG
+#	include <RemoteDebug.h>
 RemoteDebug Debug;
+#endif
 
 BolbroClass Bolbro;
 
@@ -28,6 +38,11 @@ BolbroClass::BolbroClass() {
 	mNetworks[0].ssid = NULL;
 	mUnresolvedWAN[0] = NULL;
 	mWANs[0] = IPAddress();
+
+#if !HASPREFERENCES
+	mGMTOffsetSec = 3600; /*Germany*/
+	mDaylightOffsetSec = 3600; /*Summer*/
+#endif
 }
 
 void BolbroClass::addWiFi(const char *ssid, const char *password) {
@@ -77,12 +92,14 @@ void BolbroClass::setup(const char *appname, boolean debug, boolean useRemoteDeb
 	//  Set language, doesn't work for de_DE currently
 	setlocale(LC_ALL, "de_DE");
 
+#if HASREMOTEDEBUG
 	if (useRemoteDebug&&connectToWiFi()) {
 		LOG = &Debug;
 		Debug.begin(mAppName);
 		Debug.setSerialEnabled(false);
 		Serial.println("RemoteDebug started");
 	}
+#endif
 }
 
 unsigned long BolbroClass::uptime() {
@@ -164,9 +181,11 @@ void BolbroClass::updateOHItems() {
 
 void BolbroClass::loop() {
 
+#if HASREMOTEDEBUG
 	// handle remote debugger if enabled
 	if (LOG == &Debug)
 		Debug.handle();
+#endif
 
 	// handle configure time / start time retrieval
 	switch (mConfigureTimeStatus) {
@@ -207,8 +226,14 @@ void BolbroClass::configureTime() {
 			LOG->println("before configTime...");
 			//  Set time
 			const char *ntpServer = "pool.ntp.org";
+
+#if HASPREFERENCES
 			const long gmtOffset_sec = prefGetInt("GMTOffset", 3600 /*Germany*/);
 			const int daylightOffset_sec = prefGetInt("DaylightOffset",3600 /*Summer*/);
+#else
+			const long gmtOffset_sec = mGMTOffsetSec;
+			const int daylightOffset_sec = mDaylightOffsetSec;
+#endif
 
 			configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 			LOG->println("time configured.");
@@ -220,8 +245,13 @@ void BolbroClass::configureTime() {
 void BolbroClass::setTimezone(int gmtOffset_sec, int daylightOffset_sec) {
 
 	//	store values
+#if HASPREFERENCES
 	prefSetInt("GMTOffset", gmtOffset_sec);
 	prefSetInt("DaylightOffset", daylightOffset_sec);
+#else
+	mGMTOffsetSec = gmtOffset_sec;
+	mDaylightOffsetSec = daylightOffset_sec;
+#endif
 
 	//	void existing configTime
 	mConfigureTimeStatus = ConfigureTimeNotRequested;
@@ -239,7 +269,6 @@ bool BolbroClass::timeConfigured() {
 	openHAB access
    -------------------------------------------------------------------------------- */
 
-#include <HTTPClient.h> // for communication to openHAB
 #include <ArduinoJson.h>
 
 String BolbroClass::getItemStatus(const char *item) {
@@ -248,13 +277,20 @@ String BolbroClass::getItemStatus(const char *item) {
 
 	if (connectToWiFi()&&mOpenHABHost) {
 		//  Setup http request for openHAB REST API
+#if !NEWHTTPCLIENT
+		WiFiClient client;
+#endif
 		HTTPClient http;
 
 		char httpURL[128];
 		sprintf(httpURL, "http://%s:8080/rest/items/%s", mOpenHABHost, item);
 
+#if NEWHTTPCLIENT
 		http.begin(httpURL);
 		http.setConnectTimeout(200); // local network, should be fast
+#else
+		http.begin(client, httpURL);
+#endif
 		http.setTimeout(200);
 
 		int httpResponseCode = http.GET();
@@ -293,10 +329,12 @@ String BolbroClass::getItemStatus(const char *item) {
 
 			switch (httpResponseCode) {
 
+#if NEWHTTPCLIENT
 				case HTTPC_ERROR_CONNECTION_REFUSED:
 
 					codeName = "HTTPC_ERROR_CONNECTION_REFUSED";
 					break;
+#endif
 
 				case HTTPC_ERROR_SEND_HEADER_FAILED:
 
@@ -369,12 +407,19 @@ bool BolbroClass::sendItemCommand(const char *item, const String& status) {
 	if (connectToWiFi()&&mOpenHABHost)
 	{
 		//  Setup http request for openHAB REST API
+#if !NEWHTTPCLIENT
+		WiFiClient client;
+#endif
 		HTTPClient http;
 
 		char httpURL[128];
 		sprintf(httpURL, "http://%s:8080/rest/items/%s", mOpenHABHost, item);
 
+#if NEWHTTPCLIENT
 		http.begin(httpURL);
+#else
+		http.begin(client, httpURL);
+#endif
 
 		http.addHeader("Content-Type", "text/plain");
 		http.addHeader("Accept", "application/json");
@@ -402,6 +447,9 @@ bool BolbroClass::updateItem(const char *item, const String& status) {
 	if (connectToWiFi()&&mOpenHABHost)
 	{
 		//  Setup http request for openHAB REST API
+#if !NEWHTTPCLIENT
+		WiFiClient client;
+#endif
 		HTTPClient http;
 
 		//	curl -X PUT --header "Content-Type: text/plain" --header "Accept: application/json"
@@ -409,7 +457,11 @@ bool BolbroClass::updateItem(const char *item, const String& status) {
 		char httpURL[128];
 		sprintf(httpURL, "http://%s:8080/rest/items/%s/state", mOpenHABHost, item);
 
+#if NEWHTTPCLIENT
 		http.begin(httpURL);
+#else
+		http.begin(client, httpURL);
+#endif
 
 		http.addHeader("Content-Type", "text/plain");
 		http.addHeader("Accept", "application/json");
@@ -443,12 +495,24 @@ void BolbroClass::setLastStartItem(const char *item) {
 	WiFi utilities
    -------------------------------------------------------------------------------- */
 
-#include <WiFi.h>
-#include <ESPmDNS.h> // to announce "appname.local"
+#ifdef ESP_PLATFORM // ESP32
+#	include <WiFi.h>
+#	include <ESPmDNS.h> // to announce "appname.local"
+#	include <esp_wifi.h> // esp_wifi_set_ps()
+#else
+#	include <ESP8266WiFi.h>
+#	include <ESP8266mDNS.h>
+#endif
 
 static boolean connectNetwork(const char *ssid, const char *password) {
 
 	Serial.printf("connecting to WiFi SSID: %s\n", ssid);
+
+#ifdef ESP_PLATFORM // ESP32
+	esp_wifi_set_ps (WIFI_PS_NONE); // disabling power mode, this is a must for WebServer and ping
+#else
+  wifi_set_sleep_type(NONE_SLEEP_T);
+#endif
 
 	WiFi.begin(ssid, password);
 
@@ -471,59 +535,77 @@ boolean BolbroClass::connectToWiFi() {
 
 	if (WiFi.status() != WL_CONNECTED) {
 
+		Serial.printf("WiFi configuration...\n");
+		WiFi.mode(WIFI_STA);
+
 		connected = false;
 
 		Serial.printf("testing available networks...\n");
 
-		byte numSsids = WiFi.scanNetworks();
-		struct Network *bestNetworkP = NULL;
-		long bestRSSI = -2000;
+		int numSSIDs = WiFi.scanNetworks();
 
-		for (byte ap = 0; ap<numSsids; ap++) {
-			String ssid(WiFi.SSID(ap));
-			long rssi = WiFi.RSSI(ap);
-			Serial.printf("SSID: %s, RSSI: %ld", ssid.c_str(), rssi);
+		//	observation for the ESP8266: a scan is ongoing already; wait a certain time for this
+		//	scan to complete before we continue unsuccessfully
+		long startWait = millis();
 
-			if (rssi>bestRSSI) {
-				// test if this is a known network
-				struct Network *networkP = mNetworks;
+		while (numSSIDs==WIFI_SCAN_RUNNING&&millis()-startWait<5000) {
+			Serial.printf("waiting for ongoing scan...\n");
+			delay(100);
+			numSSIDs = WiFi.scanNetworks();
+		}
 
-				while (networkP->ssid) {
+		if (numSSIDs > 0) {
+			Serial.printf("found %d SSIDs\n", numSSIDs);
 
-					if (ssid.equals(networkP->ssid)) {
-						//  known network, memorize
-						bestNetworkP = networkP;
-						bestRSSI = rssi;
-						Serial.printf(" (best so far)\n");
-						break;
+			struct Network *bestNetworkP = NULL;
+			long bestRSSI = -2000;
+
+			for (int ap = 0; ap<numSSIDs; ap++) {
+				String ssid(WiFi.SSID(ap));
+				long rssi = WiFi.RSSI(ap);
+				Serial.printf("SSID: %s, RSSI: %ld", ssid.c_str(), rssi);
+
+				if (rssi>bestRSSI) {
+					// test if this is a known network
+					struct Network *networkP = mNetworks;
+
+					while (networkP->ssid) {
+
+						if (ssid.equals(networkP->ssid)) {
+							//  known network, memorize
+							bestNetworkP = networkP;
+							bestRSSI = rssi;
+							Serial.printf(" (best so far)\n");
+							break;
+						}
+
+						networkP++;
 					}
 
+					if (!networkP->ssid)
+						Serial.printf("\n");
+				} else
+					Serial.printf("\n");
+			}
+
+			if (bestNetworkP) {
+				Serial.printf("connecting to best network...\n");
+				connected = connectNetwork(bestNetworkP->ssid, bestNetworkP->password);
+			}
+
+			if (!connected) {
+				Serial.printf("trying other networks...\n");
+				struct Network *networkP = mNetworks;
+
+				while (networkP->ssid!=NULL) {
+					if (networkP!=bestNetworkP) {
+						connected = connectNetwork(bestNetworkP->ssid, bestNetworkP->password);
+
+						if (connected)
+							break;
+					}
 					networkP++;
 				}
-
-				if (!networkP->ssid)
-					Serial.printf("\n");
-			} else
-				Serial.printf("\n");
-		}
-
-		if (bestNetworkP) {
-			Serial.printf("connecting to best network...\n");
-			connected = connectNetwork(bestNetworkP->ssid, bestNetworkP->password);
-		}
-
-		if (!connected) {
-			Serial.printf("trying other networks...\n");
-			struct Network *networkP = mNetworks;
-
-			while (networkP->ssid!=NULL) {
-				if (networkP!=bestNetworkP) {
-					connected = connectNetwork(bestNetworkP->ssid, bestNetworkP->password);
-
-					if (connected)
-						break;
-				}
-				networkP++;
 			}
 		}
 
@@ -535,8 +617,10 @@ boolean BolbroClass::connectToWiFi() {
 
 			updateOHItems();
 
+#if HASREMOTEDEBUG
 			if (LOG == &Debug)
 				Serial.printf("to monitor log output, use 'telnet %s' on command line\n", WiFi.localIP().toString().c_str());
+#endif
 		} else
 			Serial.println("giving up on WiFi connect, no network connection established");
 	}
@@ -648,6 +732,8 @@ void BolbroClass::publishDNSName() {
 	}
 }
 
+#if HASPREFERENCES
+
 /* --------------------------------------------------------------------------------
 	Preference handling
    -------------------------------------------------------------------------------- */
@@ -724,7 +810,7 @@ String BolbroClass::prefGetString(const char *key, String defaultValue) {
 	return result;
 }
 
-
+#endif
 
 
 
