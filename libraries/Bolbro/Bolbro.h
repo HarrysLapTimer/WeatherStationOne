@@ -141,7 +141,10 @@ class BolbroClass
 
 		void updateIsBedtime();
 		void publishDNSName();
+
 		void onWiFiEvent(WiFiEvent_t event);
+
+		friend void onWiFiEventFctn(WiFiEvent_t event);
 
 		const char *mSignalStrengthItem;
 		int mLastSignalStrength;

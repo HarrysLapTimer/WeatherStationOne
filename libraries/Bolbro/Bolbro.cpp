@@ -316,11 +316,16 @@ String BolbroClass::getItemStatus(const char *item) {
 			if (err==DeserializationError::Ok) {
 				const char *state = jsonDoc["state"];
 
-				if (state)
+				if (state&&strcmp(state,"NULL")!=0) {
 					result = state; // creates a String
 
-				if (mDebug)
-					LOG->printf("item %s retrieved: %s\n", item, result.c_str());
+					if (mDebug)
+						LOG->printf("item %s retrieved: %s\n", item, result.c_str());
+				} else {
+					if (mDebug)
+						LOG->printf("item %s retrieved is NULL\n", item);
+				}
+
 			} else {
 				LOG->printf("error accessing openHAB JSON: %s\n", err.c_str());
 			}
@@ -530,32 +535,32 @@ static boolean connectNetwork(const char *ssid, const char *password) {
 }
 
 void BolbroClass::onWiFiEvent(WiFiEvent_t event) {
-	/*
+
     switch(event) {
         case ARDUINO_EVENT_WIFI_STA_START:
-            //set sta hostname here
-            WiFi.setHostname(AP_SSID);
+        	if (mAppNameLowerCase)
+            	WiFi.setHostname(mAppNameLowerCase);
             break;
         case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-            //enable sta ipv6 here
             WiFi.enableIpV6();
+			publishDNSName();
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
-            Serial.print("STA IPv6: ");
-            Serial.println(WiFi.localIPv6());
+            Serial.printf("IP6 address: %s\n", WiFi.localIPv6().toString().c_str());
             break;
         case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-            wifiOnConnect();
-            wifi_connected = true;
+			Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
             break;
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            wifi_connected = false;
-            wifiOnDisconnect();
             break;
         default:
             break;
     }
-    */
+}
+
+//	work around for problem with lambda (see below)
+void onWiFiEventFctn(WiFiEvent_t event) {
+	Bolbro.onWiFiEvent(event);
 }
 
 boolean BolbroClass::connectToWiFi() {
@@ -573,7 +578,8 @@ boolean BolbroClass::connectToWiFi() {
 
 		//typedef std::function<void(system_event_id_t event, system_event_info_t info)> WiFiEventFuncCb;
     	//wifi_event_id_t onEvent(WiFiEventFuncCb cbEvent, system_event_id_t event = SYSTEM_EVENT_MAX);
-	    WiFi.onEvent((WiFiEventFuncCb)([this](system_event_id_t event, system_event_info_t info) { }), SYSTEM_EVENT_MAX);
+	    //WiFi.onEvent([this](system_event_id_t event, system_event_info_t info) { onWifiEvent(event) }, SYSTEM_EVENT_MAX); doesn't work
+	    WiFi.onEvent(onWiFiEventFctn);
 
 		connected = false;
 
@@ -648,14 +654,6 @@ boolean BolbroClass::connectToWiFi() {
 
 		if (connected) {
 			Serial.printf("WiFi %s connected\n", WiFi.SSID().c_str());
-			Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
-
-			if (WiFi.enableIpV6()) {
-				delay(1000);
-				Serial.printf("IP6 address: %s\n", WiFi.localIPv6().toString().c_str());
-			}
-
-			publishDNSName();
 
 			updateOHItems();
 
@@ -771,6 +769,8 @@ void BolbroClass::publishDNSName() {
 
 		if (MDNS.begin(lowerAppName))
 			Serial.printf("MDNS responder started: '%s.local'\n", lowerAppName);
+
+		WiFi.setHostname(lowerAppName);
 	}
 }
 

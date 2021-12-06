@@ -178,17 +178,17 @@ void BolbroWebServer::handleTime() {
 
 void BolbroWebServer::handleRestart() {
     send(200, "text/plain", "OK");
-    sleep(500); // make sure the reply is sent
+    delay(500); // make sure the reply is sent
 
 	ESP.restart();
 }
 
 void BolbroWebServer::handleReconnect() {
     send(200, "text/plain", "OK");
-    sleep(500); // make sure the reply is sent
+    delay(500); // make sure the reply is sent
 
     Bolbro.disconnectWiFi();
-    sleep(1000);
+    delay(1000);
     Bolbro.connectToWiFi(); // trigger direct re-connect
 }
 
