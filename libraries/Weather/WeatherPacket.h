@@ -58,12 +58,23 @@ class WeatherPacket : public Packet {
 			float cellVoltage = mBatteryVoltage/NUMCELLS;
 			float batteryPercentage = 0;
 			//	characteristics for a NCR18650BD Lithium-Ion cell
-			if (cellVoltage>2.0f) {
+#if 1
+//	parameters for LiIon cells connected to charger board
+#	define ZEROVOLTAGE	2.8f
+#	define MIDVOLTAGE 4.0f
+#	define FULLVOLTAGE 4.2f
+#else
+//	original parameters for LiIon cells
+#	define ZEROVOLTAGE	2.0f
+#	define MIDVOLTAGE 4.3f
+#	define FULLVOLTAGE 4.7f
+#endif
+			if (cellVoltage>ZEROVOLTAGE) {
 				float remainingCapacity;
-				if (cellVoltage<4.3f)
-					remainingCapacity = (cellVoltage-2.0)/(4.3-2.0)*3000.0;
+				if (cellVoltage<MIDVOLTAGE)
+					remainingCapacity = (cellVoltage-ZEROVOLTAGE)/(MIDVOLTAGE-ZEROVOLTAGE)*3000.0;
 				else
-					remainingCapacity = 3000.0+(cellVoltage-4.3)/(4.7-4.3)*300.0;
+					remainingCapacity = 3000.0+(cellVoltage-MIDVOLTAGE)/(FULLVOLTAGE-MIDVOLTAGE)*300.0;
 
 				batteryPercentage = 100*remainingCapacity/3200.0;
 			}
