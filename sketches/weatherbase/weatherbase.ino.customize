@@ -29,8 +29,8 @@ static void sendCalibration() {
   int packetSize = calibrationPacket.encodedSize();
   
   if (DEBUG) {
-    Serial.println("sending calibration...");
-    calibrationPacket.printSerial();
+    LOG->println("sending calibration...");
+    calibrationPacket.print(LOG);
   }
   
   HC12.write(packetBinary, packetSize);
@@ -222,7 +222,7 @@ class WeatherWebServer:public BolbroWebServer
     }
 
     void revertCalibration() {
-      Serial.println(messageToString());
+      LOG->println(messageToString());
       bool hadErrors = false;
       bool hadPassword = false;
       for (uint8_t i = 0; i < args(); i++) {
@@ -243,7 +243,7 @@ class WeatherWebServer:public BolbroWebServer
     }
     
     void changeCalibration() {
-     Serial.println(messageToString());
+     LOG->println(messageToString());
      bool hadErrors = false;
       bool hadPassword = false;
       for (uint8_t i = 0; i < args(); i++) {
@@ -381,7 +381,7 @@ void loop()
     digitalWrite(LED_PIN, HIGH); // high when sound data is received
     if (newWeatherPacket.decodeByte(HC12.read())) {
       weatherPacket = newWeatherPacket;
-      weatherPacket.printSerial();
+      weatherPacket.print(LOG);
       lastPacketUpdate = time(NULL);
       lastMillisPacketUpdated = currentMillis;
 
@@ -412,9 +412,10 @@ void loop()
 
   //  ... and update 
   if (!stationOnlineStatus
-      ||strcmp(stationOnlineStatus, stationOffline?"OFF":"ON")!=0)
-    Bolbro.updateItem("ESP32_Weatherstation_Status", stationOffline?"OFF":"ON");
-
+      ||strcmp(stationOnlineStatus, stationOffline?"OFF":"ON")!=0) {
+      stationOnlineStatus = stationOffline?"OFF":"ON";
+      Bolbro.updateItem("ESP32_Weatherstation_Status", stationOnlineStatus);
+  }
   //  Maintain sun position
   secondsPassed = (currentMillis-lastMillisSunCalculated)/MS2S_FACTOR;
   if (secondsPassed>60) { // update once a minute

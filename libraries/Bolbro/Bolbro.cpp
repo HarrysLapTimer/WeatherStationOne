@@ -97,7 +97,7 @@ void BolbroClass::setup(const char *appname, boolean debug, boolean useRemoteDeb
 		LOG = &Debug;
 		Debug.begin(mAppName);
 		Debug.setSerialEnabled(false);
-		Serial.println("RemoteDebug started");
+		Serial.println("warning: RemoteDebug started, most output will not go to Serial");
 	}
 #endif
 }

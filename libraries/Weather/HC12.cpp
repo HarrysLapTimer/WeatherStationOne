@@ -4,6 +4,7 @@
 
 #include <HC12.h>
 #include <WeatherConfig.h>
+#include <Bolbro.h>
 
 #define SET_RTC_HOLD  0
 
@@ -38,7 +39,7 @@ void HC12Class::begin() {
 void HC12Class::end() {
   if (mBeginCalled) {
     if (DEBUG)
-      Serial.println("flushing HC-12 buffer and sending it to sleep...");
+      LOG->println("flushing HC-12 buffer and sending it to sleep...");
     Serial2.flush();
     delay(200); // allow transmission of pending bytes
 
@@ -61,16 +62,16 @@ void HC12Class::write(uint8_t *bytes, int bytesNum) {
   for (int i = 0; i<bytesNum; i++) {
     Serial2.write(bytes[i]);
     if (DEBUG) {
-      Serial.print(bytes[i]);
-      Serial.print(" ");
+      LOG->print(bytes[i]);
+      LOG->print(" ");
     }
   }
 
   if (DEBUG) {
-    Serial.println();
-    Serial.print("sent ");
-    Serial.print(bytesNum);
-    Serial.println(" bytes...");
+    LOG->println();
+    LOG->print("sent ");
+    LOG->print(bytesNum);
+    LOG->println(" bytes...");
   }
 }
 

@@ -75,7 +75,7 @@ class Packet {
     }
 
     //  for debugging
-    virtual void printSerial() = 0;
+    virtual void print(Print *) = 0;
 
     //  see comment above
     virtual byte *magicByteAddr() = 0;
@@ -86,8 +86,8 @@ class Packet {
       if (setCRC) {
     		*(crc16Addr()) = crc16();
     		if (DEBUG) {
-      		Serial.print("setting CRC to ");
-        	Serial.println(*(crc16Addr()));
+      		LOG->print("setting CRC to ");
+        	LOG->println(*(crc16Addr()));
         }
      	}
       return (uint8_t *) magicByteAddr();
@@ -99,14 +99,14 @@ class Packet {
 
     bool decodeByte(byte b) {
       if (DEBUG) {
-        Serial.print(b);
-        Serial.print(" ");
+        LOG->print(b);
+        LOG->print(" ");
       }
       encodedBytes(false)[mDecodePos] = b;
       if (mDecodePos==0&&b!=MAGICBYTE) {
         //  wait for the starting byte and skip otherwise
         if (DEBUG)
-          Serial.println("skipping because not magic number");
+          LOG->println("skipping because not magic number");
         return false;
       } else {
         mDecodePos++;
@@ -116,12 +116,12 @@ class Packet {
           if (*(crc16Addr())==crc16()) {
             //  valid packet decoded
             if (DEBUG)
-              Serial.println("decoded a valid packet");
+              LOG->println("decoded a valid packet");
             return true;
           } else {
             //  corrupted packet, reset
             if (DEBUG)
-              Serial.println("decoded to a corrupted packet, skipping...");
+              LOG->println("decoded to a corrupted packet, skipping...");
             return false;
           }
         } else

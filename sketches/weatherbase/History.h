@@ -51,10 +51,10 @@ class History
         mSamples = newSamplesP;
 
         if (DEBUG) {
-          Serial.print("history ");
-          Serial.print(mName);
-          Serial.print(" increased capacity to ");
-          Serial.println(mCapacity);
+          LOG->print("history ");
+          LOG->print(mName);
+          LOG->print(" increased capacity to ");
+          LOG->println(mCapacity);
         }
       }
 
@@ -63,10 +63,10 @@ class History
       mSamples[mCount++].value = value;
 
       if (DEBUG) {
-        Serial.print("history ");
-        Serial.print(mName);
-        Serial.print(" added sample ");
-        Serial.println(value);
+        LOG->print("history ");
+        LOG->print(mName);
+        LOG->print(" added sample ");
+        LOG->println(value);
       }
         
       if (!mAggregatedVoid) {
@@ -90,7 +90,7 @@ class History
       }
 
       if (DEBUG)
-        printSerial();
+        print(LOG);
     }
 
     void addDeltaSample(float deltaValue) {
@@ -133,31 +133,31 @@ class History
         return 0;
     }
 
-    void printSerial() {
-      Serial.print("history ");
-      Serial.print(mName);
-      Serial.println(":");
-      Serial.print(" ");
-      Serial.print(mCount);
-      Serial.print(" samples: ");
+    void print(Print *LOG) {
+      LOG->print("history ");
+      LOG->print(mName);
+      LOG->println(":");
+      LOG->print(" ");
+      LOG->print(mCount);
+      LOG->print(" samples: ");
 
       for (int i = 0; i<mCount; i++) {
-        Serial.print(mSamples[i].value);
-        Serial.print("/");
-        Serial.print(mSamples[i].time);
-        Serial.print(" ");
+        LOG->print(mSamples[i].value);
+        LOG->print("/");
+        LOG->print(mSamples[i].time);
+        LOG->print(" ");
       }
-      Serial.println();
+      LOG->println();
 
       if (mAggregatedVoid)
-        Serial.println(" aggregated void");
+        LOG->println(" aggregated void");
       else {
-        Serial.print(" min: ");
-        Serial.println(mMin);
-        Serial.print(" max: ");
-        Serial.println(mMax);
-        Serial.print(" avg: ");
-        Serial.println(mAvg);
+        LOG->print(" min: ");
+        LOG->println(mMin);
+        LOG->print(" max: ");
+        LOG->println(mMax);
+        LOG->print(" avg: ");
+        LOG->println(mAvg);
       }
     }
 
@@ -201,11 +201,11 @@ class History
           mAggregatedVoid = true;
 
           if (DEBUG) {
-            Serial.print("history ");
-            Serial.print(mName);
-            Serial.print(" expired ");
-            Serial.print(numToExpire);
-            Serial.println(" samples");
+            LOG->print("history ");
+            LOG->print(mName);
+            LOG->print(" expired ");
+            LOG->print(numToExpire);
+            LOG->println(" samples");
           }
 
           return true;
@@ -236,14 +236,14 @@ class History
         mAggregatedVoid = false;
         
         if (DEBUG) {
-          Serial.print("history ");
-          Serial.print(mName);
-          Serial.print(" fully aggregated: max = ");
-          Serial.print(mMax);
-          Serial.print(" , min = ");
-          Serial.print(mMin);
-          Serial.print(" , avg = ");
-          Serial.println(mAvg);
+          LOG->print("history ");
+          LOG->print(mName);
+          LOG->print(" fully aggregated: max = ");
+          LOG->print(mMax);
+          LOG->print(" , min = ");
+          LOG->print(mMin);
+          LOG->print(" , avg = ");
+          LOG->println(mAvg);
         }
       }
     }

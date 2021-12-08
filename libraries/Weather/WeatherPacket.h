@@ -85,53 +85,53 @@ class WeatherPacket : public Packet {
 			return batteryPercentage;
 		}
 
-    void printSerial() {
-    	Serial.print("magic byte: ");
-			Serial.print(mMagicByte);
-			Serial.println(mMagicByte==MAGICBYTE?" correct":" wrong");
+    void print(Print *p) {
+    	p->print("magic byte: ");
+			p->print(mMagicByte);
+			p->println(mMagicByte==MAGICBYTE?" correct":" wrong");
 
 			if (mDeltaRainMM!=UNDEFINEDVALUE) {
-      	Serial.print("rain: ");
-        Serial.print(mDeltaRainMM, 1);
-      	Serial.println(" mm delta");
+      	p->print("rain: ");
+        p->print(mDeltaRainMM, 1);
+      	p->println(" mm delta");
       }
 
 			if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE) {
-					Serial.print("temperature: ");
-					Serial.print(mTemperatureDegreeCelsius, 1);
-					Serial.println(" degree C");
+					p->print("temperature: ");
+					p->print(mTemperatureDegreeCelsius, 1);
+					p->println(" degree C");
 
-					Serial.print("pressure: ");
-					Serial.print(mPressureHPA, 1);
-					Serial.println(" hPa");
+					p->print("pressure: ");
+					p->print(mPressureHPA, 1);
+					p->println(" hPa");
 
-					Serial.print("humidity: ");
-					Serial.print(mHumidityPercent, 0);
-					Serial.println(" %rH");
+					p->print("humidity: ");
+					p->print(mHumidityPercent, 0);
+					p->println(" %rH");
 			}
 
 			if (mWindDirection[0]) {
-					Serial.print("wind direction: ");
-					Serial.println(mWindDirection);
+					p->print("wind direction: ");
+					p->println(mWindDirection);
 			}
 
 			if (mWindSpeedMpS!=UNDEFINEDVALUE) {
-				Serial.print("wind speed: ");
-				Serial.print(mWindSpeedMpS, 1);
-				Serial.println(" m/s");
+				p->print("wind speed: ");
+				p->print(mWindSpeedMpS, 1);
+				p->println(" m/s");
 			}
 
 			if (mBatteryVoltage!=UNDEFINEDVALUE) {
-				Serial.print("battery voltage: ");
-				Serial.print(mBatteryVoltage, 2);
-				Serial.print(" V, ");
-				Serial.print(batteryPercentage(), 0);
-				Serial.println("%");
+				p->print("battery voltage: ");
+				p->print(mBatteryVoltage, 2);
+				p->print(" V, ");
+				p->print(batteryPercentage(), 0);
+				p->println("%");
 			}
 
-			Serial.print("checksum: ");
-			Serial.print(mCRC16);
-			Serial.println(mCRC16==crc16()?" correct":" wrong");
+			p->print("checksum: ");
+			p->print(mCRC16);
+			p->println(mCRC16==crc16()?" correct":" wrong");
     }
 
 #define STRING_WORKAROUND 1

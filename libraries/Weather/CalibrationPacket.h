@@ -94,52 +94,52 @@ class CalibrationPacket : public Packet {
   		save();
   	}
 
-    void printSerial() {
-    	Serial.print("magic byte: ");
-			Serial.print(mMagicByte);
-			Serial.println(mMagicByte==MAGICBYTE?" correct":" wrong");
+    void print(Print *p) {
+    	p->print("magic byte: ");
+			p->print(mMagicByte);
+			p->println(mMagicByte==MAGICBYTE?" correct":" wrong");
 
-    	Serial.print("bucket trigger volume: ");
-      Serial.print(mBucketTriggerVolume, 0);
-      Serial.print(" mm3 (");
-			Serial.print(mBucketTriggerVolume/1000.0f, 1);
-			Serial.println(" ml)");
+    	p->print("bucket trigger volume: ");
+      p->print(mBucketTriggerVolume, 0);
+      p->print(" mm3 (");
+			p->print(mBucketTriggerVolume/1000.0f, 1);
+			p->println(" ml)");
 
-			Serial.print("wind speed factor: ");
-			Serial.println(mWindSpeedFactor, 2);
+			p->print("wind speed factor: ");
+			p->println(mWindSpeedFactor, 2);
 
-			Serial.print("wind speed measurement height: ");
-			Serial.print(mMeasurementHeight, 2);
-			Serial.println(" m");
+			p->print("wind speed measurement height: ");
+			p->print(mMeasurementHeight, 2);
+			p->println(" m");
 
-			Serial.print("seconds between reports: ");
-			Serial.print(mSecondsBetweenReports);
-			Serial.println(" s");
+			p->print("seconds between reports: ");
+			p->print(mSecondsBetweenReports);
+			p->println(" s");
 
-			Serial.print("sun inclination: ");
-			Serial.print(mInclination, 1);
-			Serial.println(" degree");
+			p->print("sun inclination: ");
+			p->print(mInclination, 1);
+			p->println(" degree");
 
-			Serial.print("sun azimuth: ");
-			Serial.print(mAzimuth, 1);
-			Serial.println(" degree");
+			p->print("sun azimuth: ");
+			p->print(mAzimuth, 1);
+			p->println(" degree");
 
-			Serial.print("command: ");
+			p->print("command: ");
 			switch (mCommand) {
 				case NoCommand:
-					Serial.println("NoCommand");
+					p->println("NoCommand");
 					break;
 				case CalibrateSolarTracker:
-					Serial.println("CalibrateSolarTracker");
+					p->println("CalibrateSolarTracker");
 					break;
 				case TestSolarTracker:
-					Serial.println("TestSolarTracker");
+					p->println("TestSolarTracker");
 					break;
 			}
 
-			Serial.print("checksum: ");
-			Serial.print(mCRC16);
-			Serial.println(mCRC16==crc16()?" correct":" wrong");
+			p->print("checksum: ");
+			p->print(mCRC16);
+			p->println(mCRC16==crc16()?" correct":" wrong");
     }
 
 		String json(String linePrefix = "") {

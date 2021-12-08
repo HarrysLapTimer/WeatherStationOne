@@ -36,8 +36,8 @@ class DailyMinMax
         mHasSamples = false;
         mStartOfDaySeconds = currentBeginOfDay;
         if (DEBUG) {
-          Serial.print("reset min max for ");
-          Serial.println(mName);
+          LOG->print("reset min max for ");
+          LOG->println(mName);
         }
       }
       
@@ -50,6 +50,11 @@ class DailyMinMax
       } else {
         mMin = mMax = mLast = value;
         mHasSamples = true;
+      }
+
+      if (DEBUG) {
+        LOG->printf("updated min to %.1f, max to %.1f and last to %.1f for %s\n",
+          mMin, mMax, mLast, mName);
       }
     }
 
