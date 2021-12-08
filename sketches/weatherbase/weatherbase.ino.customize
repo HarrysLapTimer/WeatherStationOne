@@ -367,6 +367,7 @@ void loop()
   static unsigned long lastMillisLEDTurnedOn = 0;
   static unsigned long lastMillisSunCalculated = 0;
   static unsigned long lastMillisPacketUpdated = 0;
+  static const char *stationOnlineStatus = NULL;
 
   unsigned long currentMillis = millis();
 
@@ -401,10 +402,18 @@ void loop()
     digitalWrite(LED_PIN, LOW); // low once no activity detected
 
   //  ... and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
+ #define NUMMISSEDPACKETSIGNORED 4
   secondsPassed = (currentMillis-lastMillisPacketUpdated)/MS2S_FACTOR;
-  if (secondsPassed>3*calibrationPacket.mSecondsBetweenReports)
+  bool stationOffline = secondsPassed>(NUMMISSEDPACKETSIGNORED+1)*calibrationPacket.mSecondsBetweenReports;
+  
+  if (stationOffline)
     //  blink mode
     digitalWrite(LED_PIN, secondsPassed%2?HIGH:LOW);
+
+  //  ... and update 
+  if (!stationOnlineStatus
+      ||strcmp(stationOnlineStatus, stationOffline?"OFF":"ON")!=0)
+    Bolbro.updateItem("ESP32_Weatherstation_Status", stationOffline?"OFF":"ON");
 
   //  Maintain sun position
   secondsPassed = (currentMillis-lastMillisSunCalculated)/MS2S_FACTOR;
