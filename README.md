@@ -43,7 +43,11 @@ WeatherStationOne is based on the **Bolbro library** my projects are based on. I
 Now, you are ready to compile and flash the two sketches. `weatherbase` requires a customization to work:
 
 - rename `weatherbase.ino.customize` to `weatherbase.ino`
-- edit the call to `Bolbro.addWiFi()`
+- edit the call to `Bolbro.addWiFi()` to add the local WiFi to connect to
+- edit the three lines below "Forecast configuration" in case you want to add a weather forecast; an OpenWeather (including free) is required
+- access to the Administration page is prohibited for non-local network addresses by default; in case you want to access them from "outside", add calls to `Bolbro.addWANGateway()`
+- search for other entries marked with "customize" and change as required
+- customize latitude and longitude in file `WeatherConfig.h` to match your station's position
 
 By adding a WiFi made up from an SSID and a password, it will be considered as a connection point of your local network. In case you have more than one, call `addWiFi()` multiple times. The best one will be choosen.
 

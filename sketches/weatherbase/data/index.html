@@ -12,7 +12,8 @@
 				grid-template-columns: 100%;
 				grid-template-areas:
 					"header"
-					"aktuell"
+					"current"
+					"forecast"
 					"station"
 					"footer";
 				grid-gap: 10px;
@@ -22,7 +23,8 @@
 			selection { font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; }
 
 			.item-header { grid-area: header; padding-top: 1em; padding-left: 2em; padding-right: 2em; }
-			.item-aktuell { grid-area: aktuell; padding-left: 2em; padding-right: 2em; }
+			.item-current { grid-area: current; padding-left: 2em; padding-right: 2em; }
+			.item-forecast { grid-area: forecast; padding-left: 2em; padding-right: 2em; }
 			.item-station { grid-area: station; padding-left: 2em; padding-right: 2em; }
 			.item-footer { grid-area: footer; padding-left: 2em; padding-right: 2em; }
 
@@ -35,54 +37,60 @@
 			<div class="item-header">
 				<center><img src="BolbroHaus.jpg"></img></center>
 				<h2>Bolbro Wetter</h2>
-				<p>Willkommen bei der <b>Bolbro Wetterstation</b>. Alle gezeigten Werte werden mit unserer Wetterstation
+				<p>Willkommen bei der <b>Bolbro Wetterstation</b>. Alle aktuellen Werte werden mit unserer Wetterstation
 				gemessen und hier dargestellt. Die Station sieht klassisch aus, ist aber unheimlich <b>Smart</b>. Mehr
 				Informationen zur Station findest Du weiter unten.</p>
 			</div>
-			<div class="item-aktuell">
+			<div class="item-current">
 				<h3>Aktuelle Werte</h3>
 				<table id="weather-table">
  					<tr>
-    					<td style="text-align:center"><img src="temperature.png" height="64"></td>
+    					<td style="text-align:center"><img src="temperature.png" height="80"></td>
     					<td>Temperatur</td>
     					<td><span id="temperature">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="humidity.png" height="64"></td>
+    					<td style="text-align:center"><img src="humidity.png" height="80"></td>
     					<td>Luftfeuchtigkeit</td>
     					<td> <span id="humidity">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="pressure.png" height="64"></td>
+    					<td style="text-align:center"><img src="pressure.png" height="80"></td>
     					<td>Luftdruck</td>
     					<td> <span id="pressure">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="rain.png" height="64"></td>
+    					<td style="text-align:center"><img src="rain.png" height="80"></td>
     					<td>Regen</td>
     					<td> <span id="rain">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="wind.png" height="50"></td>
+    					<td style="text-align:center"><img src="wind.png" height="80"></td>
     					<td>Wind</td>
     					<td><span id="wind">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="battery.png" height="64"></td>
+    					<td style="text-align:center"><img src="battery.png" height="80"></td>
     					<td>Batterie</td>
     					<td><span id="batterypercentage">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="sun.png" height="64"></td>
+    					<td style="text-align:center"><img src="sun.png" height="80"></td>
     					<td>Sonne</td>
     					<td><span id="sun">-</span></td>
   					</tr>
  					<tr>
-    					<td style="text-align:center"><img src="updated.png" height="64"></td>
+    					<td style="text-align:center"><img src="updated.png" height="80"></td>
     					<td>Meldung</td>
-    					<td><span id="updated">-</span></td>
+    					<td><span id="updated">-</span> <span id="offline"></span></td>
   					</tr>
 				</table>
+			</div>
+			<div class="item-forecast" id="item_forecast" hidden>
+				<h3>Vorhersage</h3>
+				<table id="forecast-table">
+				</table>
+				<p><em>Daten durch OpenWeatherMap.org<br/>Station <span id="station">-</span></em></p>
 			</div>
 			<div class="item-station">
 				<h3>&Uuml;ber die Station</h3>
@@ -129,6 +137,166 @@
 
 			let windSpeedUnit = "Bf";
 
+			const coloredtemperatures = true;
+
+			function getForecastDataWithConfiguration(latitude, longitude, numdays, apikey) {
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+
+						var jsonObj = JSON.parse(this.responseText);
+
+						var table = "";
+
+						const dateoptions = { weekday: 'short', day: 'numeric' };
+						const todaydate = new Date();
+						const todaydatestr = todaydate.toLocaleDateString('de-DE', dateoptions);
+						const tomorrowdate = new Date();
+						tomorrowdate.setDate(tomorrowdate.getDate() + 1);
+						const tomorrowdatestr = tomorrowdate.toLocaleDateString('de-DE', dateoptions);
+
+						document.getElementById("station").innerHTML = jsonObj.city.name;
+
+						jsonObj.list.forEach(function(obj) {
+
+							/*
+								{
+									"dt":1639047600,
+									"sunrise":1639035185,
+									"sunset":1639061704,
+									"temp":{
+										"day":1.44,
+										"min":0.38,
+										"max":2.19,
+										"night":2.19,
+										"eve":0.65,
+										"morn":1.23
+									},
+									"feels_like":{
+										"day":-2.99,
+										"night":-1.75,
+										"eve":-3.19,
+										"morn":-3.36
+									},
+									"pressure":1004,
+									"humidity":93,
+									"weather":[
+										{
+											"id":803,
+											"main":"Clouds",
+											"description":"broken clouds",
+											"icon":"04d"
+										}],
+									"speed":5.32,
+									"deg":136,
+									"gust":8.79,
+									"clouds":75,
+									"pop":0
+								}
+							 */
+
+							table += "<tr>";
+
+							//	add date
+							table += "<td>";
+
+							var date = new Date(0);
+							date.setSeconds(obj.dt);
+
+							datestr = date.toLocaleDateString('de-DE', dateoptions);
+
+							if (datestr == tomorrowdatestr)
+								datestr = "Morgen";
+							if (datestr == todaydatestr)
+								datestr = "Heute";
+
+							table += datestr;
+							table += "</td>";
+
+							//	add icon
+							table += "<td style=\"text-align:center\"><img src=\"WeatherIcon";
+							table += obj.weather[0].icon;
+							table += ".png\" height=\"80\"></td>";
+
+							//	add temperature
+							table += "<td>";
+							if (coloredtemperatures) {
+								table += "<span style=\"color:blue\">&mapstodown;";
+								table += obj.temp.min.toFixed(0);
+								table += "</span>";
+								table += " <span style=\"color:red\">&mapstoup;";
+								table += obj.temp.max.toFixed(0);
+								table += "</span> &#8451;";
+							} else {
+								table += "&mapstodown;";
+								table += obj.temp.min.toFixed(0);
+								table += " ";
+								table += "&mapstoup;";
+								table += obj.temp.max.toFixed(0);
+								table += " &#8451;";
+							}
+
+							//	add wind
+							table += "&#12539;";
+							switch(windSpeedUnit) {
+								case "m/s":
+									table += obj.speed.toFixed(1); // 1
+									table += " <sup>m</sup>&frasl;<sub>s</sub>";
+									break;
+								case "kn":
+									table += (obj.speed * 1.94384).toFixed(1);
+									table += " kn";
+									break;
+								case "Bf":
+									table += Math.pow (obj.speed/0.836,2.0/3.0).toFixed(0);
+									table += " Bf";
+									break;
+							}
+							if (obj.deg) {
+								var winddirectionindex = Math.round((obj.deg+11.25)/22.5)%16;
+								table += " " + windDirectionsArray[winddirectionindex][0];
+							}
+
+							//	add rain
+							if ("rain" in obj) {
+								table += "&#12539;";
+								table += "<img src='rain.png' height='40' style='vertical-align:middle'>";
+								table += (obj.rain*10).toFixed(0);
+								table += " mm";
+							}
+
+							table += "</td>";
+
+							table += "</tr>";
+						});
+
+						document.getElementById("forecast-table").innerHTML = table;
+						document.getElementById("item_forecast").hidden = false;
+					}
+				};
+
+				xhttp.open("GET", "http://api.openweathermap.org/data/2.5/forecast/daily?lat=" +
+							latitude + "&lon=" +longitude + "&cnt=" + numdays + "&units=metric&mode=json&APPID=" + apikey, true);
+				xhttp.send();
+			}
+
+			function getForecastData() {
+
+				document.getElementById("item_forecast").hidden = true;
+
+				var xhttp = new XMLHttpRequest();
+				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+						var jsonObj = JSON.parse(this.responseText);
+
+						getForecastDataWithConfiguration(jsonObj.latitude, jsonObj.longitude, jsonObj.numdays, jsonObj.apikey)
+					}
+				};
+
+				xhttp.open("GET", "forecast-configuration.json", true);
+				xhttp.send();
+			}
+
 			function getWeatherData() {
 				var xhttp = new XMLHttpRequest();
 				xhttp.onreadystatechange = function() {
@@ -141,8 +309,13 @@
 						if (jsonObj.weather.temperature!="-") {
 							temperature = jsonObj.weather.temperature + " &#8451;";
 
-							if (jsonObj.aggregated.mintemperature!="-"&&jsonObj.aggregated.maxtemperature!="-")
-								temperature = temperature + " (&mapstodown;" + jsonObj.aggregated.mintemperature + " &mapstoup;"  + jsonObj.aggregated.maxtemperature + ")"
+							if (jsonObj.aggregated.mintemperature!="-"&&jsonObj.aggregated.maxtemperature!="-") {
+								if (coloredtemperatures) {
+									temperature = temperature + " (<span style='color:blue'>&mapstodown;" + jsonObj.aggregated.mintemperature + "</span> <span style='color:red'>&mapstoup;" + jsonObj.aggregated.maxtemperature + "</span>)"
+								} else {
+									temperature = temperature + " (&mapstodown;" + jsonObj.aggregated.mintemperature + " &mapstoup;"  + jsonObj.aggregated.maxtemperature + ")"
+								}
+							}
 						}
 						document.getElementById("temperature").innerHTML = temperature;
 
@@ -229,6 +402,14 @@
 
 						document.getElementById("batterypercentage").innerHTML = jsonObj.weather.batterypercentage=="-"?"-":jsonObj.weather.batterypercentage + " %";
 						document.getElementById("updated").innerHTML = jsonObj["updated-de"];
+
+						if (jsonObj["updated-de"]!="-")
+							if (jsonObj["offline"])
+								document.getElementById("offline").innerHTML = "<img src='RedDot12.png' height='12' style='vertical-align:middle'>";
+							else
+								document.getElementById("offline").innerHTML = "<img src='GreenDot12.png' height='12' style='vertical-align:middle'>";
+						else
+							document.getElementById("offline").innerHTML = "";
 					}
 				};
 				xhttp.open("GET", "weatherdata.json", true);
@@ -252,11 +433,15 @@
 						break;
 				}
 				getWeatherData();
+				getForecastData();
 			}
 
 			//	one time calls
-			setInterval(function() {getWeatherData();}, 5000);
+			setInterval(function() {getWeatherData();}, 5*1000);
 			getWeatherData();
+
+			setInterval(function() {getForecastData();}, 15*60*1000 );
+			getForecastData();
 
     	</script>
 	</body>

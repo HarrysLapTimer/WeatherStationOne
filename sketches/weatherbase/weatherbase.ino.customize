@@ -14,9 +14,15 @@
 #include "DailyMinMax.h"
 #include "Sun.h"
 
+//  Forecast configuration
+#define USEFORECAST 0 // customize, set to 1 in case the next four defines are available
+#define FORECASTNUMDAYS 16 // customize
+#define APIKEY "APIKEY"
+
 //  CRCed weather data
 WeatherPacket weatherPacket;
 time_t lastPacketUpdate = 0;
+bool stationOffline = true;
 
 //  temporary weather data for reading
 WeatherPacket newWeatherPacket;
@@ -79,7 +85,9 @@ class WeatherWebServer:public BolbroWebServer
       //  static content
       on("/", [this]() { loadFromSpiffs("/index.html"); });
       on("/administration.html", [this]() { CHECKLOCALACCESS loadFromSpiffs("/administration.html"); });
+      
       on("/BolbroHaus.jpg", [this]() { loadFromSpiffs("/BolbroHaus.jpg"); });
+      
       on("/battery.png", [this]() { loadFromSpiffs("/battery.png"); });
       on("/humidity.png", [this]() { loadFromSpiffs("/humidity.png"); });
       on("/pressure.png", [this]() { loadFromSpiffs("/pressure.png"); });
@@ -90,9 +98,23 @@ class WeatherWebServer:public BolbroWebServer
       on("/rain.png", [this]() { loadFromSpiffs("/rain.png"); });
       on("/inclination.png", [this]() { loadFromSpiffs("/inclination.png"); });
       on("/azimuth.png", [this]() { loadFromSpiffs("/azimuth.png"); });
+      
+      on("/WeatherIcon01d.png", [this]() { loadFromSpiffs("/WeatherIcon01d.png"); });
+      on("/WeatherIcon02d.png", [this]() { loadFromSpiffs("/WeatherIcon02d.png"); });
+      on("/WeatherIcon03d.png", [this]() { loadFromSpiffs("/WeatherIcon03d.png"); });
+      on("/WeatherIcon04d.png", [this]() { loadFromSpiffs("/WeatherIcon04d.png"); });
+      on("/WeatherIcon09d.png", [this]() { loadFromSpiffs("/WeatherIcon09d.png"); });
+      on("/WeatherIcon10d.png", [this]() { loadFromSpiffs("/WeatherIcon10d.png"); });
+      on("/WeatherIcon11d.png", [this]() { loadFromSpiffs("/WeatherIcon11d.png"); });
+      on("/WeatherIcon13d.png", [this]() { loadFromSpiffs("/WeatherIcon13d.png"); });
+      on("/WeatherIcon50d.png", [this]() { loadFromSpiffs("/WeatherIcon50d.png"); });
+      
+      on("/RedDot12.png", [this]() { loadFromSpiffs("/RedDot12.png"); });
+      on("/GreenDot12.png", [this]() { loadFromSpiffs("/GreenDot12.png"); });
 
       //  dynamic stuff
       on("/weatherdata.json", [this]() { handleWeatherData(); });
+      on("/forecast-configuration.json", [this]() { handleForecastConfiguration(); });
       on("/calibrationdata.json", [this]() { handleCalibrationData(); });
       on("/change-calibration", [this]() { CHECKLOCALACCESS changeCalibration(); });
       on("/revert-calibration", [this]() { CHECKLOCALACCESS revertCalibration(); });
@@ -103,6 +125,21 @@ class WeatherWebServer:public BolbroWebServer
     }
     
   private:
+
+    void handleForecastConfiguration() {
+      String json = "{\n";
+
+#if USEFORECAST
+      json += "\t\"latitude\" : " + String(LATITUDE, 2) + ",\n";
+      json += "\t\"longitude\" : " + String(LONGITUDE, 2) + ",\n";
+      json += "\t\"numdays\" : " + String(FORECASTNUMDAYS) + ",\n";
+      json += "\t\"apikey\" : \"" + String(APIKEY) + "\"\n";
+#endif 
+      json += "}\n";
+    
+      send(200, "application/json", json);
+      LOG->println("file /forecast-configuration.json generated and sent");
+    }
   
     void handleWeatherData() {
       String json = "{\n";
@@ -149,6 +186,10 @@ class WeatherWebServer:public BolbroWebServer
         json += "\t\"updated-de\" : \"-\",\n";
         json += "\t\"updated\" : \"-\",\n";
       }
+
+      json += "\t\"offline\" : ";
+      json += stationOffline?"true":"false";
+      json += ",\n";
 
       json += "\t\"sun\" : {\n";
 
@@ -330,9 +371,9 @@ void setup()
 {
   //  configure Bolbro
   Bolbro.setSerialBaud(115200l);
-  Bolbro.addWiFi(SSID,PW); // customize
+  Bolbro.addWiFi("SSID","PW""); // customize
  
-  Bolbro.addWANGateway(WAN); // customize or remove
+  Bolbro.addWANGateway("WAN""); // customize or remove
 
   Bolbro.setOpenHABHost("openhabian"); // customize or remove
   Bolbro.setSignalStrengthItem("ESP32_Weatherbase_SignalStrength"); // customize or remove
@@ -404,7 +445,10 @@ void loop()
   //  ... and blink in case the LED is off for longer than 3*SECONDS_BETWEEN_REPORTS
  #define NUMMISSEDPACKETSIGNORED 4
   secondsPassed = (currentMillis-lastMillisPacketUpdated)/MS2S_FACTOR;
-  bool stationOffline = secondsPassed>(NUMMISSEDPACKETSIGNORED+1)*calibrationPacket.mSecondsBetweenReports;
+  if (lastMillisPacketUpdated)
+    stationOffline = secondsPassed>(NUMMISSEDPACKETSIGNORED+1)*calibrationPacket.mSecondsBetweenReports;
+  else
+    stationOffline = true;
   
   if (stationOffline)
     //  blink mode
