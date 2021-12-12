@@ -1,15 +1,15 @@
 /****************************************************************************************************
   development settings
  ****************************************************************************************************/
-#define DEBUG true
-#define USEREMOTEDEBUG true
+#define DEBUG true // customize
+#define USEREMOTEDEBUG true // customize
 #define CALIBRATION false
 
 /****************************************************************************************************
   configuration
  ****************************************************************************************************/
 
-#define ADMINPASSWORD "admin123"
+#define ADMINPASSWORD "admin123" // customize
 
 #define DEFAULT_SECONDS_BETWEEN_REPORTS 20 // raise to reduce battery drain; default value, overriden by CalibrationPacket
 #define SECONDS_SAMPLING 3

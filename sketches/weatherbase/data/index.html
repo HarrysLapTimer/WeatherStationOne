@@ -90,7 +90,7 @@
 				<h3>Vorhersage</h3>
 				<table id="forecast-table">
 				</table>
-				<p><em>Daten durch OpenWeatherMap.org<br/>Station <span id="station">-</span></em></p>
+				<p><em>Daten <span id="station">-</span> (<a target="_blank" rel="noopener noreferrer" href="http://openweathermap.org">openweathermap.org</a>)</em></p>
 			</div>
 			<div class="item-station">
 				<h3>&Uuml;ber die Station</h3>
@@ -253,8 +253,10 @@
 									break;
 							}
 							if (obj.deg) {
-								var winddirectionindex = Math.round((obj.deg+11.25)/22.5)%16;
-								table += " " + windDirectionsArray[winddirectionindex][0];
+								//	add short form of wind direction
+								var winddirectionindex = (Math.round(obj.deg/45)*2)%16;
+								//	... and map East to Ost
+								table += " " + windDirectionsArray[winddirectionindex][0].text.replace(/E/g, "O")
 							}
 
 							//	add rain
