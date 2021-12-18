@@ -30,6 +30,8 @@
 
 			table { margin-left:2em; }
 			td { font-size: 27pt; padding-right: 20px; padding-bottom: 10px; }
+			.forecast-table td { font-size: 27pt; padding: 10px; background-color:#F6F6F6; }
+			.forecast-weekend-row td { font-size: 27pt; padding: 10px; background-color:#E6E6E6; }
 		</style>
 	</head>
 	<body>
@@ -88,7 +90,7 @@
 			</div>
 			<div class="item-forecast" id="item_forecast" hidden>
 				<h3>Vorhersage</h3>
-				<table id="forecast-table">
+				<table id="forecast-table" class="forecast-table">
 				</table>
 				<p><em>Daten <span id="station">-</span> (<a target="_blank" rel="noopener noreferrer" href="http://openweathermap.org">openweathermap.org</a>)</em></p>
 			</div>
@@ -138,6 +140,7 @@
 			let windSpeedUnit = "Bf";
 
 			const coloredtemperatures = true;
+			const forcasttabled = true;
 
 			function getForecastDataWithConfiguration(latitude, longitude, numdays, apikey) {
 				var xhttp = new XMLHttpRequest();
@@ -195,15 +198,18 @@
 								}
 							 */
 
-							table += "<tr>";
 
 							//	add date
-							table += "<td>";
-
 							var date = new Date(0);
 							date.setSeconds(obj.dt);
 
 							datestr = date.toLocaleDateString('de-DE', dateoptions);
+
+							if (datestr.startsWith("Sa")||datestr.startsWith("So"))
+								table += "<tr class='forecast-weekend-row'>";
+							else
+								table += "<tr>";
+							table += "<td>";
 
 							if (datestr == tomorrowdatestr)
 								datestr = "Morgen";
@@ -219,7 +225,7 @@
 							table += ".png\" height=\"80\"></td>";
 
 							//	add temperature
-							table += "<td>";
+							table += "<td style='text-align:right'>";
 							if (coloredtemperatures) {
 								table += "<span style=\"color:blue\">&mapstodown;";
 								table += obj.temp.min.toFixed(0);
@@ -237,7 +243,11 @@
 							}
 
 							//	add wind
-							table += "&#12539;";
+							if (forcasttabled)
+								table += "</td><td style='text-align:right'>";
+							else
+								table += "&#12539;";
+
 							switch(windSpeedUnit) {
 								case "m/s":
 									table += obj.speed.toFixed(1); // 1
@@ -256,16 +266,20 @@
 								//	add short form of wind direction
 								var winddirectionindex = (Math.round(obj.deg/45)*2)%16;
 								//	... and map East to Ost
-								table += " " + windDirectionsArray[winddirectionindex][0].text.replace(/E/g, "O")
+								table += " <img src='wind" + windDirectionsArray[winddirectionindex][0] + ".png' height='32' style='vertical-align:middle'>";
 							}
 
 							//	add rain
+							if (forcasttabled)
+								table += "</td><td>";
 							if ("rain" in obj) {
-								table += "&#12539;";
-								table += "<img src='rain.png' height='40' style='vertical-align:middle'>";
-								table += obj.rain.toFixed(0);
+								if (!forcasttabled)
+									table += "&#12539;";
+								table += "<img src='raindrop.png' height='32' style='vertical-align:middle'> ";
+								table += obj.rain.toFixed(1);
 								table += " mm";
-							}
+							} else if (forcasttabled)
+								table += "trocken";
 
 							table += "</td>";
 
@@ -389,8 +403,11 @@
 									break;
 							}
 
-							if (jsonObj.weather.winddirection!="-")
-								wind = wind + " " + windDirections.get(jsonObj.weather.winddirection);
+							if (jsonObj.weather.winddirection!="-") {
+								// wind = wind + " " + windDirections.get(jsonObj.weather.winddirection);
+								wind += " <img src='wind" + jsonObj.weather.winddirection + ".png' height='32' style='vertical-align:middle'>&nbsp;";
+								wind += jsonObj.weather.winddirection.replace(/E/g,"O");
+							}
 						}
 						document.getElementById("wind").innerHTML = wind;
 

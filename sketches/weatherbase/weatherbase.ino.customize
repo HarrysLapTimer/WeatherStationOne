@@ -98,6 +98,7 @@ class WeatherWebServer:public BolbroWebServer
       on("/rain.png", [this]() { loadFromSpiffs("/rain.png"); });
       on("/inclination.png", [this]() { loadFromSpiffs("/inclination.png"); });
       on("/azimuth.png", [this]() { loadFromSpiffs("/azimuth.png"); });
+      on("/raindrop.png", [this]() { loadFromSpiffs("/raindrop.png"); });
       
       on("/WeatherIcon01d.png", [this]() { loadFromSpiffs("/WeatherIcon01d.png"); });
       on("/WeatherIcon02d.png", [this]() { loadFromSpiffs("/WeatherIcon02d.png"); });
@@ -108,6 +109,23 @@ class WeatherWebServer:public BolbroWebServer
       on("/WeatherIcon11d.png", [this]() { loadFromSpiffs("/WeatherIcon11d.png"); });
       on("/WeatherIcon13d.png", [this]() { loadFromSpiffs("/WeatherIcon13d.png"); });
       on("/WeatherIcon50d.png", [this]() { loadFromSpiffs("/WeatherIcon50d.png"); });
+
+      on("/windN.png", [this]() { loadFromSpiffs("/windN.png"); });
+      on("/windNNE.png", [this]() { loadFromSpiffs("/windNNE.png"); });
+      on("/windNE.png", [this]() { loadFromSpiffs("/windNE.png"); });
+      on("/windENE.png", [this]() { loadFromSpiffs("/windENE.png"); });
+      on("/windE.png", [this]() { loadFromSpiffs("/windE.png"); });
+      on("/windESE.png", [this]() { loadFromSpiffs("/windESE.png"); });
+      on("/windSE.png", [this]() { loadFromSpiffs("/windSE.png"); });
+      on("/windSSE.png", [this]() { loadFromSpiffs("/windSSE.png"); });
+      on("/windS.png", [this]() { loadFromSpiffs("/windS.png"); });
+      on("/windSSW.png", [this]() { loadFromSpiffs("/windSSW.png"); });
+      on("/windSW.png", [this]() { loadFromSpiffs("/windSW.png"); });
+      on("/windWSW.png", [this]() { loadFromSpiffs("/windWSW.png"); });
+      on("/windW.png", [this]() { loadFromSpiffs("/windW.png"); });
+      on("/windWNW.png", [this]() { loadFromSpiffs("/windWNW.png"); });
+      on("/windNW.png", [this]() { loadFromSpiffs("/windNW.png"); });
+      on("/windNNW.png", [this]() { loadFromSpiffs("/windNNW.png"); });
       
       on("/RedDot12.png", [this]() { loadFromSpiffs("/RedDot12.png"); });
       on("/GreenDot12.png", [this]() { loadFromSpiffs("/GreenDot12.png"); });

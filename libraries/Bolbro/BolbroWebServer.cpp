@@ -87,22 +87,27 @@ bool BolbroWebServer::loadFromSpiffs(String path)
   else if(path.endsWith(".zip"))
     dataType = "application/zip";
 
-  File dataFile = SPIFFS.open(path.c_str(), "r");
+  if (SPIFFS.exists(path.c_str())) {
+    File dataFile = SPIFFS.open(path.c_str(), "r");
 
-  if (hasArg("download"))
-    dataType = "application/octet-stream";
+    if (hasArg("download"))
+      dataType = "application/octet-stream";
 
-  sendHeader("Cache-Control", "max-age=1000");
-  setContentLength(dataFile.size());
+    sendHeader("Cache-Control", "max-age=1000");
+    setContentLength(dataFile.size());
 
-  result = streamFile(dataFile, dataType) == dataFile.size();
+    result = streamFile(dataFile, dataType) == dataFile.size();
 
-  if (result)
-    LOG->printf("file %s read and sent\n", path.c_str());
-  else
-    LOG->printf("sending file %s failed...\n", path.c_str());
+    if (result)
+      LOG->printf("file %s read and sent\n", path.c_str());
+    else
+      LOG->printf("sending file %s failed...\n", path.c_str());
 
-  dataFile.close();
+    dataFile.close();
+  } else {
+      LOG->printf("file %s does not exist...\n", path.c_str());
+      result = false;
+  }
 
   return result;
 }
