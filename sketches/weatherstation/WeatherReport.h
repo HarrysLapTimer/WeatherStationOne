@@ -73,7 +73,7 @@ class WeatherReport {
 
       if (DEBUG) {
         Serial.println("sending report...");
-        mPacket.printSerial();
+        mPacket.print(&Serial);
       }
 
       HC12.write(packetBinary, packetSize);

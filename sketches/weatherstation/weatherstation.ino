@@ -40,6 +40,7 @@ RTC_DATA_ATTR CalibrationPacket calibrationPacket(initializeCalibrationPacketMem
  ****************************************************************************************************/
 
 RTC_DATA_ATTR unsigned int numRainBuckets = 0;
+RTC_DATA_ATTR bool rainBucketOperational = true; // bucket is *not* horizontal permanently
 RTC_DATA_ATTR unsigned int lastNumRainBucketsReported = 0;
 
 /****************************************************************************************************
@@ -270,14 +271,28 @@ const double gaugeArea = M_PI*(gaugeDiameter/2)*(gaugeDiameter/2); // mm2
 
 static void handleRainState() {
   //  called after ext0 wakeup, increment
-  numRainBuckets++;
-  if (DEBUG) {
-    Serial.print("increased number of rain buckets to ");
-    Serial.println(numRainBuckets);
-  }
+  if (rainBucketOperational) {
+    numRainBuckets++;
+    if (DEBUG) {
+      Serial.print("increased number of rain buckets to ");
+      Serial.println(numRainBuckets);
+    }
+  } else
+      Serial.println("skipped increasing number of rain buckets");    
 }
 
 static void propagateRain(WeatherReport &report) {
+
+  //  sanity check - the rain bucket pin should be LOW here; in case it is not
+  //  the bucket is probably in horizontal position
+  rainBucketOperational = digitalRead(RAIN_PIN)==LOW;
+
+  if (DEBUG)
+    if (rainBucketOperational)
+      Serial.println("bucket o.k., pulse collection operational");
+    else
+      Serial.println("bucket in horizontal position, disabling pulse collection");
+
   //  to calculate mm from buckets
   unsigned int numDeltaBuckets = 0;
   
@@ -539,7 +554,7 @@ void loop() {
         digitalWrite(LED_PIN, HIGH); // high when sound data is received
         if (newCalibrationPacket.decodeByte(HC12.read())) {
             calibrationPacket = newCalibrationPacket; // sound packet
-            calibrationPacket.printSerial();
+            calibrationPacket.print(&Serial);
             
             //  Check if we have received a command...
             if (calibrationPacket.mCommand != CalibrationPacket::Command::NoCommand) {
