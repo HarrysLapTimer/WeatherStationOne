@@ -50,6 +50,11 @@ class BolbroWebServer : public WebServer
 
 	//	reconnect WiFi
 	void handleReconnect();
+
+	//	store text message
+	void handleTextMessage();
+	void setTextMessage(String textMessage);
+	String textMessage();
 };
 
 #endif

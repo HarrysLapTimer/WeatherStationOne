@@ -1,5 +1,6 @@
 <html>
 	<head>
+		<meta charset="utf-8" />
 		<title>Bolbro Wetter</title>
 		<style>
 			body { background-color: #ffffff; font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; color: #000000; }
@@ -42,6 +43,7 @@
 				<p>Willkommen bei der <b>Bolbro Wetterstation</b>. Alle aktuellen Werte werden mit unserer Wetterstation
 				gemessen und hier dargestellt. Die Station sieht klassisch aus, ist aber unheimlich <b>Smart</b>. Mehr
 				Informationen zur Station findest Du weiter unten.</p>
+				<p id="message" hidden></p>
 			</div>
 			<div class="item-current">
 				<h3>Aktuelle Werte</h3>
@@ -123,7 +125,7 @@
 				</ul></p>
 			</div>
 			<div class="item-footer">
-				<p>Copyright &copy; 2021, Harald Schlangmann &ndash; <a href="administration.html">Administration</a></p>
+				<p>Copyright &copy; 2022, Harald Schlangmann &ndash; <a href="administration.html">Administration</a></p>
 			</div>
 		</div>
 
@@ -319,6 +321,12 @@
 					if (this.readyState == 4 && this.status == 200) {
 
 						var jsonObj = JSON.parse(this.responseText);
+
+						if ("message" in jsonObj) {
+							document.getElementById("message").innerHTML = "<span style='color:red'>" + jsonObj.message + "</span>";
+							document.getElementById("message").hidden = false;
+						} else
+							document.getElementById("message").hidden = true;
 
 						var temperature = "-";
 

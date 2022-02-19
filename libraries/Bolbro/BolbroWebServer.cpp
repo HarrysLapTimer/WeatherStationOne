@@ -17,6 +17,7 @@ void BolbroWebServer::begin() {
   on("/restart", [this]() { CHECKLOCALACCESS handleRestart(); });
   on("/reconnect", [this]() { CHECKLOCALACCESS handleReconnect(); });
   on("/time", [this]() { CHECKLOCALACCESS handleTime(); });
+  on("/setmessage", [this]() { CHECKLOCALACCESS handleTextMessage(); });
   onNotFound([this]() { CHECKLOCALACCESS handleNotFound(); });
 
   WebServer::begin();
@@ -197,6 +198,25 @@ void BolbroWebServer::handleReconnect() {
     Bolbro.connectToWiFi(); // trigger direct re-connect
 }
 
+void BolbroWebServer::handleTextMessage() {
+  bool requestValid = args()==1&&argName(0).equalsIgnoreCase("text");
+
+  if (requestValid)
+  	setTextMessage(arg(0));
+
+  if (requestValid)
+    send(200, "text/plain", "OK");
+  else
+    send(404, "text/plain", "invalid arguments");
+}
+
+void BolbroWebServer::setTextMessage(String textMessage) {
+	Bolbro.prefSetString("textMessage", textMessage);
+}
+
+String BolbroWebServer::textMessage() {
+	return Bolbro.prefGetString("textMessage");
+}
 
 
 

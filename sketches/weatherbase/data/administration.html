@@ -1,5 +1,6 @@
 <html>
 	<head>
+		<meta charset="utf-8" />
 		<title>Bolbro Wetter</title>
 		<style>
 			body, input { background-color: #ffffff; font-family: Arial, Helvetica, Sans-Serif; font-size: 27pt; color: #000000; }
@@ -56,6 +57,10 @@
 							<td><input type="number" id="reportSecs" name="reportSecs" min="20" max="120" required> s</td>
 						</tr>
 						<tr>
+							<td><label for="message">Störmeldung</label></td>
+							<td><input type="text" id="message" name="message"></td>
+						</tr>
+						<tr>
 							<td><label for="password">Passwort</label></td>
 							<td><input type="password" id="password" name="password" required></td>
 						</tr>
@@ -75,7 +80,7 @@
 				</p>
 			</div>
 			<div class="item-footer">
-				<p>Copyright &copy; 2021, Harald Schlangmann</p>
+				<p>Copyright &copy; 2022, Harald Schlangmann</p>
 			</div>
 		</div>
 
@@ -91,6 +96,10 @@
 						document.getElementById("speedFactor").value = jsonObj.speedFactor;
 						document.getElementById("height").value = jsonObj.height;
 						document.getElementById("reportSecs").value = jsonObj.reportSecs;
+						if ("message" in jsonObj)
+							document.getElementById("message").value = jsonObj.message;
+						else
+							document.getElementById("message").value = "";
 					}
 				};
 				xhttp.open("GET", "calibrationdata.json", true);
@@ -111,6 +120,7 @@
         		formdata.append("speedFactor", document.getElementById("speedFactor").value);
         		formdata.append("height", document.getElementById("height").value);
         		formdata.append("reportSecs", document.getElementById("reportSecs").value);
+        		formdata.append("message", document.getElementById("message").value);
         		formdata.append("password", document.getElementById("password").value);
 
 				xhttp.onreadystatechange = function () {
