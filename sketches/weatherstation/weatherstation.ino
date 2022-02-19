@@ -175,17 +175,85 @@ static void printWakeupReason() {
  ****************************************************************************************************/
 
 //  wind vane / direction
+#if USE_AS5600
 static void propagateWindDirection(WeatherReport &report) {
 
-  if (!report.hasWindDirection()) {
+  if (TESTING||!report.hasWindDirection()) {
 
     if (DEBUG) {
+#if TESTING
+      Serial.println("retrieving wind vane data...");
+#else
       static bool reported = false;
       if (!reported) {
         startSerial();
         Serial.println("retrieving wind vane data...");
         reported = true;
       }
+#endif
+    }
+
+    int rawValue = analogRead(WIND_VANE_PIN);
+
+    if (TESTING&&DEBUG)
+      Serial.printf("raw A2D value is %d\n", rawValue);
+
+    //  while the AS5600 allows read outs in degrees using the I2C or
+    //  PWM interfaces, we use the analog plus A2D interface. It is
+    //  the default set for the chip and allows us to use the bigger
+    //  soldering points; the mapping is good enough to derive one of
+    //  the 16 directions
+  
+    //  map 22.5 degree segments starting with "N" to raw values
+    //  this mapping works around the non-linearity of A2D conversion
+    //  in addition, it minimized the "blind" spot between 4095 / 0
+    //  the best way possible
+    static int raw4direction[] = 
+      {
+        4095, 0, 197, 460, 704, 951, 1223, 1484,
+        1743, 1936, 2186, 2410, 2732, 3020, 3363, 3744 
+      };
+  
+    //  find best match according to raw value
+    int best_i = 0;
+    int best_diff = 4096;
+    for (int i = 0; i<16; i++) {
+      int diff = 2048 - abs(abs(raw4direction[i]-rawValue)%4096 - 2048);
+      if (diff<best_diff) {
+        best_diff = diff;
+        best_i = i;
+      }
+    }
+
+    //  set result
+    static const char *directions[] = 
+      {
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" 
+      };
+
+    if (TESTING&&DEBUG)
+      Serial.printf("direction measured: %s\n", directions[best_i]);
+      
+    report.setWindDirection(directions[best_i]);  
+  }
+}
+#else
+static void propagateWindDirection(WeatherReport &report) {
+
+  if (!report.hasWindDirection()) {
+
+    if (DEBUG) {
+#if TESTING
+      Serial.println("retrieving wind vane data...");
+#else      
+      static bool reported = false;
+      if (!reported) {
+        startSerial();
+        Serial.println("retrieving wind vane data...");
+        reported = true;
+      }
+#endif
     }
 
     static struct {
@@ -265,6 +333,7 @@ static void propagateWindDirection(WeatherReport &report) {
     }
   }
 }
+#endif
 
 const double gaugeDiameter = 106; // mm
 const double gaugeArea = M_PI*(gaugeDiameter/2)*(gaugeDiameter/2); // mm2
@@ -322,21 +391,29 @@ static void propagateTemperatureEtAll(WeatherReport &report) {
 
   if (!report.hasTemperature()) {  
     if (DEBUG) {
+#if TESTING
+      Serial.println("retrieving BME280 data...");
+#else      
       static bool reported = false;
       if (!reported) {
         startSerial();
         Serial.println("retrieving BME280 data...");
         reported = true;
       }
+#endif
     }
     Adafruit_BME280 bme;
     if (!bme.begin(0x76)) {
+#if TESTING
+      Serial.println("no temperature sensor found...");
+#else            
       static bool reported = false;
       if (!reported) {
         startSerial();
         Serial.println("no temperature sensor found...");
         reported = true;
       }
+#endif
     } else {
       int numRetries = 10;
 
@@ -365,16 +442,16 @@ static void propagateBatteryVoltage(WeatherReport &report) {
   //  voltage dividor is made up like
   //    GND -> resistorMeasurement -> VOLTAGE_DIVIDOR_PIN -> resistorAdder -> voltage
   //  calibration:
-  //    set CALIBRATION to true
+  //    set TESTBATTERY to 1
   //    measure voltage between GND and VOLTAGE_DIVIDOR_PIN using a multimeter
   //    read out ADC value
   //    meaure precise resistor values resistorMeasurement and resistorAdder
   //    customize resistorMeasurement, resistorAdder, voltageDividorMeasured, and voltageDividorMeasuredADCValue
-  
-  if (CALIBRATION) {
-    Serial.print("ADC value for calibration: ");
-    Serial.println(adcValue);
-  }
+
+#if TESTBATTERY
+  Serial.print("ADC value for calibration: ");
+  Serial.println(adcValue);
+#endif
 
   float voltageDividorMeasured = 2.45; // customize
   int voltageDividorMeasuredADCValue = 2870; // customize, must not be 4095
@@ -397,22 +474,22 @@ static void propagateBatteryVoltage(WeatherReport &report) {
   if (voltage>3.3)
     voltage = 3.3;
 
-  if (CALIBRATION) {
-    Serial.print("ADC voltage: ");
-    Serial.print(voltage,3);
-    Serial.println(" V");
-  }
+#if TESTBATTERY
+  Serial.print("ADC voltage: ");
+  Serial.print(voltage,3);
+  Serial.println(" V");
+#endif
   
   //  we have a voltage devidor made up from two 10k resistors
   const float resistorMeasurement = 9.82;  // customize
   const float resistorAdder = 9.77; // customize
   voltage = voltage*(resistorMeasurement+resistorAdder)/resistorMeasurement;
 
-  if (CALIBRATION) {
-    Serial.print("battery voltage: ");
-    Serial.print(voltage,3);
-    Serial.println(" V");
-  }
+#if TESTBATTERY
+  Serial.print("battery voltage: ");
+  Serial.print(voltage,3);
+  Serial.println(" V");
+#endif
 
   report.addVoltage(voltage);
 }
@@ -473,9 +550,11 @@ WeatherReport report;
 
 void setup() {
 
+#if !TESTING
   if (DEBUG) {
     printWakeupReason();
   }
+#endif
   
   //  configure signaling LEDs
   pinMode(LED_PIN, OUTPUT);
@@ -485,6 +564,7 @@ void setup() {
   pinMode(RAIN_PIN, INPUT);
   delay(10); // make sure digitalRead() is ready
 
+#if !TESTING
   //  handle wakup cause
   switch(esp_sleep_get_wakeup_cause()) {
     case ESP_SLEEP_WAKEUP_EXT0:
@@ -509,20 +589,25 @@ void setup() {
   //  going to loop(), we will send reports... bring up HC-12
   //  communication early
   HC12.begin();
+#endif
 
   //  setup wind vane
+ #if !USE_AS5600
   pinMode(WIND_VANE_S0, OUTPUT);
   pinMode(WIND_VANE_S1, OUTPUT);
   pinMode(WIND_VANE_S2, OUTPUT);
   pinMode(WIND_VANE_Z, INPUT_PULLDOWN);
+#endif
 
   //  setup anemometer
   pinMode(WINDSPEED_PIN, INPUT_PULLDOWN);
   attachInterrupt(digitalPinToInterrupt(WINDSPEED_PIN), handleWindSpeed, RISING);
 
-  if (DEBUG)
+  if (DEBUG) {
+    startSerial();  
     Serial.println("finished setup, continuing to loop()");
-
+  }
+  
   //  set starting millis for sampling-loop
   startSampling = millis();
 
@@ -534,16 +619,32 @@ void setup() {
 }
 
 void loop() {
+
   //  check whether the time passed since start exceeds sampling time
   if (millis()-startSampling>SECONDS_SAMPLING*MS2S_FACTOR) {
     //  sensors propagating once
+#if !TESTING||TESTWIND
     propagateWindSpeed(report);
     propagateWindDirection(report);
+#endif
+#if !TESTING||TESTTEMPERATURE
     propagateTemperatureEtAll(report);
+#endif
+#if !TESTING||TESTRAIN
     propagateRain(report);
+#endif
+
+#if TESTING
+    digitalWrite(LED_PIN, LOW); //  turn LED off
+
+    delay(5000); // wait a bit for next cycle
     
+    //  set starting millis for sampling-loop
+    startSampling = millis();
+#else
     //  send report...
     report.send();
+
     digitalWrite(LED_PIN, LOW); //  turn LED off
     
     //  ...wait for a calibration update...
@@ -582,6 +683,7 @@ void loop() {
     
     //  ...and goto sleep afterwards 
     deepSleep();
+#endif
   }
 
 #if USE_TRACKER

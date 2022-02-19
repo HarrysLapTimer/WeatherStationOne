@@ -163,6 +163,17 @@ class WeatherWebServer:public BolbroWebServer
       String json = "{\n";
     
       json += "\t\"weather\" : " + weatherPacket.json("\t") + ",\n";
+
+      String message = textMessage();
+
+      if (stationOffline) {
+        if (message.length()>0)
+          message.concat(" ");
+        message.concat("Aktuelle Werte sind veraltet, bitte Zeitpunkt der letzten Meldung beachten.");
+      }
+      
+      if (message.length()>0)
+        json += "\t\"message\" : \"" + message + "\",\n";
     
       if (lastPacketUpdate) {
         //  set "German" representation
@@ -274,7 +285,7 @@ class WeatherWebServer:public BolbroWebServer
     }
 
     void handleCalibrationData() {
-      String json = calibrationPacket.json();
+      String json = calibrationPacket.json(textMessage());
     
       send(200, "application/json", json);
       LOG->println("file /calibrationdata.json generated and sent");
@@ -338,6 +349,9 @@ class WeatherWebServer:public BolbroWebServer
           else
             calibrationPacket.mBucketTriggerVolume = newValue;
           LOG->printf("bucketVol: %.2f, hadErrors: %s\n", newValue, hadErrors?"true":"false");
+        } else if (argName(i)=="message") {
+          setTextMessage(arg(i));          
+          LOG->printf("message: '%s'\n", arg(i));
         } else
           hadErrors = true;
       }     

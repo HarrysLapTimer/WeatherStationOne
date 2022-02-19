@@ -3,7 +3,20 @@
  ****************************************************************************************************/
 #define DEBUG true // customize
 #define USEREMOTEDEBUG true // customize
-#define CALIBRATION false
+
+//	make implementation decisions
+#define USE_TRACKER 0 // customize, enabled code for the optional solar tracker (work in progress)
+#define USE_AS5600 1 // customize, decide on whether wind directions are measured using reeds/HC4051 muxer, or AS5600
+
+//	testing support- used during development / calibration of WeatherStation
+#define TESTWIND 1
+#define TESTRAIN 0
+#define TESTTEMPERATURE 0
+#define TESTBATTERY 0
+
+//	in case one of the testing flags are set, the station will run tests and report them to Serial,
+//	base communication will be disabled as well as deep sleep and friends
+#define TESTING (TESTWIND||TESTRAIN||TESTTEMPERATURE||TESTBATTERY)
 
 /****************************************************************************************************
   configuration
@@ -20,14 +33,18 @@
 #define LATITUDE (54.0+49.361/60.0) // customize
 #define LONGITUDE (9.0+36.987/60.0) // customize
 
-//  wind vane
-#define WIND_VANE_S0 15 // address direction
-#define WIND_VANE_S1 2
-#define WIND_VANE_S2 18
-#define WIND_VANE_Z 5 // read direction
+//  wind vane and anemometer
+#if USE_AS5600
+#	define WIND_VANE_PIN 32
+#	define WINDSPEED_PIN 5
+#else
+#	define WIND_VANE_S0 15 // address direction
+#	define WIND_VANE_S1 2
+#	define WIND_VANE_S2 18
+#	define WIND_VANE_Z 5 // read direction
+#	define WINDSPEED_PIN 32
+#endif
 
-//  anemometer
-#define WINDSPEED_PIN 32
 #define NUM_COUNTS_PER_TURN 1 // depends on magnet / reed position
 
 //	speed calibration: assuming the cup centers will move at wind speed, we have
@@ -54,18 +71,19 @@
 #define SDA_PIN 21 // documentation only
 #define SCL_PIN 22 // documentation only
 
+#if USE_TRACKER
 //	solar tracker
-#define USE_TRACKER false
-#define TRACKER_HOME_DEGREE 66.0 // degree at which the magnet triggers the reed contact
-#define TRACKER_MIN_DEGREE 60.0
-#define TRACKER_MAX_DEGREE (180.0+(180.0-TRACKER_MIN_DEGREE))
-#define STEPS_PER_REVOLUTION (360/11.25*63.68395) // 28BYJ-48 with 11.25° per step and a 1:63.68395 gearbox
+#	define TRACKER_HOME_DEGREE 66.0 // degree at which the magnet triggers the reed contact
+#	define TRACKER_MIN_DEGREE 60.0
+#	define TRACKER_MAX_DEGREE (180.0+(180.0-TRACKER_MIN_DEGREE))
+#	define STEPS_PER_REVOLUTION (360/11.25*63.68395) // 28BYJ-48 with 11.25° per step and a 1:63.68395 gearbox
 
-#define STEPPER_IN1_PIN 19 // 15 35
-#define STEPPER_IN2_PIN 25 // 2 25
-#define STEPPER_IN3_PIN 26 // 0 26
-#define STEPPER_IN4_PIN 13  // 4 13
-#define TRACKER_CALIBRATION_PIN 23
+#	define STEPPER_IN1_PIN 19 // 15 35
+#	define STEPPER_IN2_PIN 25 // 2 25
+#	define STEPPER_IN3_PIN 26 // 0 26
+#	define STEPPER_IN4_PIN 13  // 4 13
+#	define TRACKER_CALIBRATION_PIN 23
+#endif
 
 //  HC-12
 #define HC12_RXD_PIN 16 // Serial2 RX
