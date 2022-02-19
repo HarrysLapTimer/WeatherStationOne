@@ -142,7 +142,7 @@ class CalibrationPacket : public Packet {
 			p->println(mCRC16==crc16()?" correct":" wrong");
     }
 
-		String json(String linePrefix = "") {
+		String json(String message = "", String linePrefix = "") {
 
       String json = linePrefix + "{\n";
 
@@ -152,6 +152,8 @@ class CalibrationPacket : public Packet {
       json += linePrefix + "\t\"inclination\" : " + String(mInclination, 1) +",\n";
       json += linePrefix + "\t\"azimuth\" : " + String(mAzimuth, 1) +",\n";
       json += linePrefix + "\t\"reportSecs\" : " + String(mSecondsBetweenReports) +",\n";
+      if (message.length()>0)
+      	json += linePrefix + "\t\"message\" : \"" + String(message) +"\",\n";
       json += linePrefix + "\t\"command\" : " + String(mCommand) +"\n";
 
       json += linePrefix + "}";
