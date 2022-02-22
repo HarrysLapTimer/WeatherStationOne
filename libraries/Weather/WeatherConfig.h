@@ -1,22 +1,17 @@
 /****************************************************************************************************
   development settings
  ****************************************************************************************************/
-#define DEBUG true // customize
-#define USEREMOTEDEBUG true // customize
+#define DEBUG 1 // customize, more text output
+#define USEREMOTEDEBUG 1 // customize, use remote debug (weatherbase)
+#define TESTING 0 // customize, enable continuous testing vs. deep sleep cycle
 
 //	make implementation decisions
 #define USE_TRACKER 0 // customize, enabled code for the optional solar tracker (work in progress)
-#define USE_AS5600 1 // customize, decide on whether wind directions are measured using reeds/HC4051 muxer, or AS5600
-
-//	testing support- used during development / calibration of WeatherStation
-#define TESTWIND 1
-#define TESTRAIN 0
-#define TESTTEMPERATURE 0
-#define TESTBATTERY 0
-
-//	in case one of the testing flags are set, the station will run tests and report them to Serial,
-//	base communication will be disabled as well as deep sleep and friends
-#define TESTING (TESTWIND||TESTRAIN||TESTTEMPERATURE||TESTBATTERY)
+#define USE_WIND_REED 0 // customize, enable code for anemometer and wind vane using reeds/HC4051 muxer
+#define USE_WIND_AS5600 0 // customize, enable code for anemometer and wind vane using reed/AS5600
+#define USE_TEMPERATURE 0 // customize, enable code for temperature at al
+#define USE_RAIN 1 // customize, enable code for rain gauge
+#define USE_BATTERY 0 // customize, enable code for battery level
 
 /****************************************************************************************************
   configuration
@@ -34,17 +29,20 @@
 #define LONGITUDE (9.0+36.987/60.0) // customize
 
 //  wind vane and anemometer
-#if USE_AS5600
+#if USE_WIND_AS5600
 #	define WIND_VANE_PIN 32
 #	define WINDSPEED_PIN 5
-#else
+#endif // USE_WIND_AS5600
+
+#if USE_WIND_REED
 #	define WIND_VANE_S0 15 // address direction
 #	define WIND_VANE_S1 2
 #	define WIND_VANE_S2 18
 #	define WIND_VANE_Z 5 // read direction
 #	define WINDSPEED_PIN 32
-#endif
+#endif // USE_WIND_REED
 
+#if USE_WIND_REED||USE_WIND_AS5600
 #define NUM_COUNTS_PER_TURN 1 // depends on magnet / reed position
 
 //	speed calibration: assuming the cup centers will move at wind speed, we have
@@ -58,12 +56,19 @@
 
 #define ANEMOMETER_RADIUS 0.08 // 80mm = 0.08m
 #define ANEMOMETER_LOSS 1.18
-//#define DEFAULT_WINDSPEED_FACTOR 2.7
 #define DEFAULT_WINDSPEED_FACTOR (2*M_PI*ANEMOMETER_RADIUS*ANEMOMETER_LOSS)
+
+#else
+
+#define DEFAULT_WINDSPEED_FACTOR 2.7
+
+#endif // USE_WIND_REED||USE_WIND_AS5600
 #define DEFAULT_MEASUREMENT_HEIGHT 10.0 // no compensation
 
 //  rain gauge
+#if USE_RAIN
 #define RAIN_PIN 27
+#endif // USE_RAIN
 // 	8 pulses = 25ml, one bucket = 3.125ml
 #define DEFAULT_BUCKET_TRIGGER_VOLUME 3125.0f // 3.125ml = 3125m3;
 
@@ -92,7 +97,10 @@
 
 //  others
 #define LED_PIN 4
+
+#if USE_BATTERY
 #define VOLTAGE_DIVIDOR_PIN 34
+#endif // USE_BATTERY
 #define NUMCELLS 1
 
 //  other constants

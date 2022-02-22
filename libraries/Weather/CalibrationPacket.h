@@ -99,18 +99,22 @@ class CalibrationPacket : public Packet {
 			p->print(mMagicByte);
 			p->println(mMagicByte==MAGICBYTE?" correct":" wrong");
 
+#if USE_RAIN
     	p->print("bucket trigger volume: ");
       p->print(mBucketTriggerVolume, 0);
       p->print(" mm3 (");
 			p->print(mBucketTriggerVolume/1000.0f, 1);
 			p->println(" ml)");
+#endif // USE_RAIN
 
+#if USE_WIND_REED||USE_WIND_AS5600
 			p->print("wind speed factor: ");
 			p->println(mWindSpeedFactor, 2);
 
 			p->print("wind speed measurement height: ");
 			p->print(mMeasurementHeight, 2);
 			p->println(" m");
+#endif // USE_WIND_REED||USE_WIND_AS5600
 
 			p->print("seconds between reports: ");
 			p->print(mSecondsBetweenReports);

@@ -11,17 +11,18 @@
 //  project
 #include <CalibrationPacket.h>
 #include "WeatherReport.h"
-#if USE_TRACKER
-# include "Tracker.h"
 
+#if USE_TRACKER
 /****************************************************************************************************
   solar tracker
  ****************************************************************************************************/
 
+# include "Tracker.h"
+
 RTC_DATA_ATTR bool initializeTrackerMembers = true;
 RTC_DATA_ATTR Tracker tracker(initializeTrackerMembers);
 
-#endif
+#endif // USE_TRACKER
 
 /****************************************************************************************************
   calibration stuff
@@ -66,16 +67,19 @@ static void startSerial() {
   }
 }
 
+#if !TESTING
 //  safe way to goto deep sleep
 static void deepSleep() {
 
+#if USE_WIND_REED||USE_WIND_AS5600
   //  make sure we do not get interupts after deep sleep
   detachInterrupt(digitalPinToInterrupt(WINDSPEED_PIN));
+#endif
 
 #if USE_TRACKER
   //  detach stepper
   tracker.deepSleep();
-#endif
+#endif // USE_TRACKER
 
   //  turn LED off
   digitalWrite(LED_PIN, LOW);
@@ -83,15 +87,19 @@ static void deepSleep() {
   //  send HC12 to power saving mode
   HC12.end();
 
+#if USE_RAIN
   //  set up all rain pin triggered wake up - make sure we register for any change
   //  this works around a station lock down in case the rain gauge short cuts (always HIGH)
   lastWakeupLevel = digitalRead(RAIN_PIN)?0:1;
 
-  if (DEBUG) {
-    Serial.print("enabling ext0 wake up for RAIN_PIN going to state ");
-    Serial.println(lastWakeupLevel);
-  }
+#if DEBUG
+  Serial.print("enabling ext0 wake up for RAIN_PIN going to state ");
+  Serial.println(lastWakeupLevel);
+#endif // DEBUG
+
   esp_sleep_enable_ext0_wakeup ((gpio_num_t) RAIN_PIN, lastWakeupLevel); // wake up on every change
+
+#endif // USE_RAIN
 
   //  station reports data on timer wakeups only; set a wakeup time relative to
   //  last reporting time...
@@ -105,26 +113,27 @@ static void deepSleep() {
   else
     secondsToNextReport = MINIMAL_WAIT_SECONDS;
   
-  if (DEBUG) {
-    Serial.print("enabling timer wake up in ");
-    Serial.print(secondsToNextReport);
-    Serial.println(" s");
-    if (wakeupsSinceLastReport>0) {
-      Serial.print("with time reduced by ");
-      Serial.print(wakeupsSinceLastReport*SECONDS_PER_EXT0_WAKEUP);
-      Serial.println(" seconds due to rain wake ups");
-    }
+#if DEBUG
+  Serial.print("enabling timer wake up in ");
+  Serial.print(secondsToNextReport);
+  Serial.println(" s");
+  if (wakeupsSinceLastReport>0) {
+    Serial.print("with time reduced by ");
+    Serial.print(wakeupsSinceLastReport*SECONDS_PER_EXT0_WAKEUP);
+    Serial.println(" seconds due to rain wake ups");
   }
+#endif // DEBUG
+
   esp_sleep_enable_timer_wakeup (secondsToNextReport*uS2S_FACTOR);
   
   Serial.println("going to deep sleep...");
 
+#if DEBUG
   if (serialStarted) {
-    if (DEBUG) {
-      Serial.flush();
-      delay(1000); // make sure flush is completed before power down
-    }
+    Serial.flush();
+    delay(1000); // make sure flush is completed before power down
   }
+#endif // DEBUG
   
   //  sent ESP32 to deep sleep
   esp_deep_sleep_start();  
@@ -158,6 +167,8 @@ static void printWakeupReason() {
   }
 }
 
+#endif // !TESTING
+
 /****************************************************************************************************
   sensor handling functions
 
@@ -175,12 +186,12 @@ static void printWakeupReason() {
  ****************************************************************************************************/
 
 //  wind vane / direction
-#if USE_AS5600
+#if USE_WIND_AS5600
 static void propagateWindDirection(WeatherReport &report) {
 
   if (TESTING||!report.hasWindDirection()) {
 
-    if (DEBUG) {
+#if DEBUG
 #if TESTING
       Serial.println("retrieving wind vane data...");
 #else
@@ -190,14 +201,14 @@ static void propagateWindDirection(WeatherReport &report) {
         Serial.println("retrieving wind vane data...");
         reported = true;
       }
-#endif
-    }
+#endif // TESTING
+#endif // DEBUG
 
     int rawValue = analogRead(WIND_VANE_PIN);
 
-    if (TESTING&&DEBUG)
-      Serial.printf("raw A2D value is %d\n", rawValue);
-
+#if TESTING&&DEBUG
+    Serial.printf("raw A2D value is %d\n", rawValue);
+#endif // TESTING&&DEBUG
     //  while the AS5600 allows read outs in degrees using the I2C or
     //  PWM interfaces, we use the analog plus A2D interface. It is
     //  the default set for the chip and allows us to use the bigger
@@ -232,18 +243,21 @@ static void propagateWindDirection(WeatherReport &report) {
         "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" 
       };
 
-    if (TESTING&&DEBUG)
-      Serial.printf("direction measured: %s\n", directions[best_i]);
+#if TESTING&&DEBUG
+    Serial.printf("direction measured: %s\n", directions[best_i]);
+#endif // TESTING&&DEBUG
       
     report.setWindDirection(directions[best_i]);  
   }
 }
-#else
+#endif // USE_WIND_AS5600
+
+#if USE_WIND_REED
 static void propagateWindDirection(WeatherReport &report) {
 
-  if (!report.hasWindDirection()) {
+  if (TESTING||!report.hasWindDirection()) {
 
-    if (DEBUG) {
+#if DEBUG
 #if TESTING
       Serial.println("retrieving wind vane data...");
 #else      
@@ -253,8 +267,8 @@ static void propagateWindDirection(WeatherReport &report) {
         Serial.println("retrieving wind vane data...");
         reported = true;
       }
-#endif
-    }
+#endif // TESTING
+#endif // DEBUG
 
     static struct {
       const char *windDirection;
@@ -284,8 +298,9 @@ static void propagateWindDirection(WeatherReport &report) {
     const char *result = NULL;
     uint8_t directions = 0;
 
-    if (DEBUG)
-      Serial.print("active directions: ");
+#if DEBUG
+    Serial.print("active directions: ");
+#endif // DEBUG
 
     for (int i = 0; i<8; i++) {
       //  select one of 8 vane contacts
@@ -297,10 +312,10 @@ static void propagateWindDirection(WeatherReport &report) {
       //  read and store in directions
       if (digitalRead(WIND_VANE_Z)) {
         directions = directions|(0b1<<i);
-        if (DEBUG) {
-          Serial.print(windDirectionPattern[i*2].windDirection);
-          Serial.print(" ");
-        }    
+#if DEBUG
+        Serial.print(windDirectionPattern[i*2].windDirection);
+        Serial.print(" ");
+#endif    
       }
     }
 
@@ -313,10 +328,10 @@ static void propagateWindDirection(WeatherReport &report) {
       }
     }
     
-    if (DEBUG) {
-      Serial.print("-> ");
-      Serial.println(result);
-    }
+#if DEBUG
+    Serial.print("-> ");
+    Serial.println(result);
+#endif
 
     if (result)
       report.setWindDirection(result);
@@ -333,8 +348,9 @@ static void propagateWindDirection(WeatherReport &report) {
     }
   }
 }
-#endif
+#endif // USE_WIND_REED
 
+#if USE_RAIN
 const double gaugeDiameter = 106; // mm
 const double gaugeArea = M_PI*(gaugeDiameter/2)*(gaugeDiameter/2); // mm2
 
@@ -342,10 +358,10 @@ static void handleRainState() {
   //  called after ext0 wakeup, increment
   if (rainBucketOperational) {
     numRainBuckets++;
-    if (DEBUG) {
-      Serial.print("increased number of rain buckets to ");
-      Serial.println(numRainBuckets);
-    }
+#if DEBUG
+    Serial.print("increased number of rain buckets to ");
+    Serial.println(numRainBuckets);
+#endif // DEBUG
   } else
       Serial.println("skipped increasing number of rain buckets");    
 }
@@ -356,11 +372,12 @@ static void propagateRain(WeatherReport &report) {
   //  the bucket is probably in horizontal position
   rainBucketOperational = digitalRead(RAIN_PIN)==LOW;
 
-  if (DEBUG)
-    if (rainBucketOperational)
-      Serial.println("bucket o.k., pulse collection operational");
-    else
-      Serial.println("bucket in horizontal position, disabling pulse collection");
+#if DEBUG
+  if (rainBucketOperational)
+    Serial.println("bucket o.k., pulse collection operational");
+  else
+    Serial.println("bucket in horizontal position, disabling pulse collection");
+#endif // DEBUG
 
   //  to calculate mm from buckets
   unsigned int numDeltaBuckets = 0;
@@ -371,13 +388,15 @@ static void propagateRain(WeatherReport &report) {
 
   double deltaRainMM = numDeltaBuckets*calibrationPacket.mBucketTriggerVolume/gaugeArea;
 
-  if (DEBUG&&numDeltaBuckets>0) {
+#if DEBUG
+  if (numDeltaBuckets>0) {
     Serial.print("adding ");
     Serial.print(numDeltaBuckets);
     Serial.print(" buckets equaling ");
     Serial.print(deltaRainMM, 2);
     Serial.println("mm rain");
   }
+#endif // DEBUG
 
   //  rainMM is the rain in mm we got since last time propagateRain has been called
   report.setDeltaRain(deltaRainMM);
@@ -386,22 +405,27 @@ static void propagateRain(WeatherReport &report) {
   lastNumRainBucketsReported = numRainBuckets;
 }
 
+#endif // USE_RAIN
+
+#if USE_TEMPERATURE
+
 //  temperature/barometric/humidity sensor
 static void propagateTemperatureEtAll(WeatherReport &report) {
 
-  if (!report.hasTemperature()) {  
-    if (DEBUG) {
+  if (TESTING||!report.hasTemperature()) {  
+#if DEBUG
 #if TESTING
-      Serial.println("retrieving BME280 data...");
+    Serial.println("retrieving BME280 data...");
 #else      
-      static bool reported = false;
-      if (!reported) {
-        startSerial();
-        Serial.println("retrieving BME280 data...");
-        reported = true;
-      }
-#endif
+    static bool reported = false;
+    if (!reported) {
+      startSerial();
+      Serial.println("retrieving BME280 data...");
+      reported = true;
     }
+#endif
+#endif
+
     Adafruit_BME280 bme;
     if (!bme.begin(0x76)) {
 #if TESTING
@@ -433,6 +457,10 @@ static void propagateTemperatureEtAll(WeatherReport &report) {
   }
 }
 
+#endif // USE_TEMPERATURE
+
+#if USE_BATTERY
+
 static void propagateBatteryVoltage(WeatherReport &report) {
 
   int adcValue = analogRead(VOLTAGE_DIVIDOR_PIN);
@@ -442,16 +470,16 @@ static void propagateBatteryVoltage(WeatherReport &report) {
   //  voltage dividor is made up like
   //    GND -> resistorMeasurement -> VOLTAGE_DIVIDOR_PIN -> resistorAdder -> voltage
   //  calibration:
-  //    set TESTBATTERY to 1
+  //    set TESTING to 1
   //    measure voltage between GND and VOLTAGE_DIVIDOR_PIN using a multimeter
   //    read out ADC value
   //    meaure precise resistor values resistorMeasurement and resistorAdder
   //    customize resistorMeasurement, resistorAdder, voltageDividorMeasured, and voltageDividorMeasuredADCValue
 
-#if TESTBATTERY
+#if TESTING
   Serial.print("ADC value for calibration: ");
   Serial.println(adcValue);
-#endif
+#endif // TESTING
 
   float voltageDividorMeasured = 2.45; // customize
   int voltageDividorMeasuredADCValue = 2870; // customize, must not be 4095
@@ -474,35 +502,39 @@ static void propagateBatteryVoltage(WeatherReport &report) {
   if (voltage>3.3)
     voltage = 3.3;
 
-#if TESTBATTERY
+#if TESTING
   Serial.print("ADC voltage: ");
   Serial.print(voltage,3);
   Serial.println(" V");
-#endif
+#endif // TESTING
   
   //  we have a voltage devidor made up from two 10k resistors
   const float resistorMeasurement = 9.82;  // customize
   const float resistorAdder = 9.77; // customize
   voltage = voltage*(resistorMeasurement+resistorAdder)/resistorMeasurement;
 
-#if TESTBATTERY
+#if TESTING
   Serial.print("battery voltage: ");
   Serial.print(voltage,3);
   Serial.println(" V");
-#endif
+#endif // TESTING
 
   report.addVoltage(voltage);
 }
+
+#endif // USE_BATTERY
 
 static unsigned long startSampling; // initialized  in setup()
 static int windSpeedCounts = 0;
 static void handleWindSpeed() {
   windSpeedCounts++;
-  if (DEBUG) {
-    Serial.print("increased wind speed count to ");
-    Serial.println(windSpeedCounts);
-  }
+#if DEBUG
+  Serial.print("increased wind speed count to ");
+  Serial.println(windSpeedCounts);
+#endif // DEBUG
 } 
+
+#if USE_WIND_REED||USE_WIND_AS5600
 
 static void propagateWindSpeed(WeatherReport &report) {
   unsigned long speedSampleTime = millis(); 
@@ -542,6 +574,8 @@ static void propagateWindSpeed(WeatherReport &report) {
     report.setWindSpeed(0);
 }
 
+#endif // USE_WIND_REED||USE_WIND_AS5600
+
 /****************************************************************************************************
   main functions  
  ****************************************************************************************************/
@@ -550,19 +584,19 @@ WeatherReport report;
 
 void setup() {
 
-#if !TESTING
-  if (DEBUG) {
-    printWakeupReason();
-  }
-#endif
+#if !TESTING&&DEBUG
+  printWakeupReason();
+#endif // !TESTING&&DEBUG
   
   //  configure signaling LEDs
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH); // high until deep sleep
 
+#if USE_RAIN
   //  configure rain PIN
   pinMode(RAIN_PIN, INPUT);
   delay(10); // make sure digitalRead() is ready
+#endif // USE_RAIN
 
 #if !TESTING
   //  handle wakup cause
@@ -570,8 +604,10 @@ void setup() {
     case ESP_SLEEP_WAKEUP_EXT0:
       //  wakeup has been set either for state 1 or 0
       //  increase count only in case we are in 1
+#if USE_RAIN
       if (lastWakeupLevel) 
         handleRainState();
+#endif
       wakeupsSinceLastReport++;
       //  goto deep sleep instantly
       deepSleep();
@@ -589,24 +625,26 @@ void setup() {
   //  going to loop(), we will send reports... bring up HC-12
   //  communication early
   HC12.begin();
-#endif
+#endif // !TESTING
 
   //  setup wind vane
- #if !USE_AS5600
+ #if USE_WIND_REED
   pinMode(WIND_VANE_S0, OUTPUT);
   pinMode(WIND_VANE_S1, OUTPUT);
   pinMode(WIND_VANE_S2, OUTPUT);
   pinMode(WIND_VANE_Z, INPUT_PULLDOWN);
-#endif
+#endif // USE_WIND_REED
 
+#if USE_WIND_REED||USE_WIND_AS5600
   //  setup anemometer
   pinMode(WINDSPEED_PIN, INPUT_PULLDOWN);
   attachInterrupt(digitalPinToInterrupt(WINDSPEED_PIN), handleWindSpeed, RISING);
+#endif // USE_WIND_REED||USE_WIND_AS5600
 
-  if (DEBUG) {
-    startSerial();  
-    Serial.println("finished setup, continuing to loop()");
-  }
+#if DEBUG
+  startSerial();  
+  Serial.println("finished setup, continuing to loop()");
+#endif // DEBUG
   
   //  set starting millis for sampling-loop
   startSampling = millis();
@@ -615,7 +653,7 @@ void setup() {
   //  maintain tracker status
   if (tracker.canBeControlled())
     tracker.moveTo(calibrationPacket.mAzimuth);
-#endif
+#endif // USE_TRACKER
 }
 
 void loop() {
@@ -623,16 +661,18 @@ void loop() {
   //  check whether the time passed since start exceeds sampling time
   if (millis()-startSampling>SECONDS_SAMPLING*MS2S_FACTOR) {
     //  sensors propagating once
-#if !TESTING||TESTWIND
+#if USE_WIND_AS5600||USE_WIND_REED
     propagateWindSpeed(report);
     propagateWindDirection(report);
-#endif
-#if !TESTING||TESTTEMPERATURE
+#endif // USE_WIND_AS5600||USE_WIND_REED
+
+#if USE_TEMPERATURE
     propagateTemperatureEtAll(report);
-#endif
-#if !TESTING||TESTRAIN
+#endif // USE_TEMPERATURE
+
+#if USE_RAIN
     propagateRain(report);
-#endif
+#endif // USE_RAIN
 
 #if TESTING
     digitalWrite(LED_PIN, LOW); //  turn LED off
@@ -671,7 +711,7 @@ void loop() {
                   while (!tracker.canBeControlled())
                     tracker.run();
                   break;          
-#endif        
+#endif // USE_TRACKER        
               }
             }
             
@@ -683,15 +723,17 @@ void loop() {
     
     //  ...and goto sleep afterwards 
     deepSleep();
-#endif
+#endif // TESTING
   }
 
 #if USE_TRACKER
   //  run tracker if position has changed
   tracker.run();
-#endif
+#endif // USE_TRACKER
 
   //  sensors collecting data for a longer time
+#if USE_BATTERY
   propagateBatteryVoltage(report);
+#endif // USE_BATTERY
   delay(100);
 }

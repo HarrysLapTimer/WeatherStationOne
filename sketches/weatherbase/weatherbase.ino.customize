@@ -86,7 +86,7 @@ class WeatherWebServer:public BolbroWebServer
       on("/", [this]() { loadFromSpiffs("/index.html"); });
       on("/administration.html", [this]() { CHECKLOCALACCESS loadFromSpiffs("/administration.html"); });
       
-      on("/BolbroHaus.jpg", [this]() { loadFromSpiffs("/BolbroHaus.jpg"); });
+      on("/BolbroHaus.png", [this]() { loadFromSpiffs("/BolbroHaus.png"); });
       
       on("/battery.png", [this]() { loadFromSpiffs("/battery.png"); });
       on("/humidity.png", [this]() { loadFromSpiffs("/humidity.png"); });

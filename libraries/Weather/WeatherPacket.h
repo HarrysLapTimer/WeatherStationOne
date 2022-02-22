@@ -90,12 +90,15 @@ class WeatherPacket : public Packet {
 			p->print(mMagicByte);
 			p->println(mMagicByte==MAGICBYTE?" correct":" wrong");
 
+#if USE_RAIN
 			if (mDeltaRainMM!=UNDEFINEDVALUE) {
       	p->print("rain: ");
         p->print(mDeltaRainMM, 1);
       	p->println(" mm delta");
       }
+#endif // USE_RAIN
 
+#if USE_TEMPERATURE
 			if (mTemperatureDegreeCelsius!=UNDEFINEDVALUE) {
 					p->print("temperature: ");
 					p->print(mTemperatureDegreeCelsius, 1);
@@ -109,7 +112,9 @@ class WeatherPacket : public Packet {
 					p->print(mHumidityPercent, 0);
 					p->println(" %rH");
 			}
+#endif // USE_TEMPERATURE
 
+#if USE_WIND_REED||USE_WIND_AS5600
 			if (mWindDirection[0]) {
 					p->print("wind direction: ");
 					p->println(mWindDirection);
@@ -120,7 +125,9 @@ class WeatherPacket : public Packet {
 				p->print(mWindSpeedMpS, 1);
 				p->println(" m/s");
 			}
+#endif
 
+#if USE_BATTERY
 			if (mBatteryVoltage!=UNDEFINEDVALUE) {
 				p->print("battery voltage: ");
 				p->print(mBatteryVoltage, 2);
@@ -128,6 +135,7 @@ class WeatherPacket : public Packet {
 				p->print(batteryPercentage(), 0);
 				p->println("%");
 			}
+#endif // USE_BATTERY
 
 			p->print("checksum: ");
 			p->print(mCRC16);
